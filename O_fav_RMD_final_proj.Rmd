@@ -11,10 +11,12 @@ output:
 setwd("/Users/mariaingersoll/Desktop/BU Research/Davies-Gilmore")
 library("DESeq2")
 library("ggplot2")
+library("tidyverse")
+library("dplyr")
 ```
 - Read in counts using read.table, of pre-filtered count data. The function read.table reads a file in table format and creates a data frame from it (cases corresponding to lines and variables to fields in the file)
 ```{r}
-countData <- read.table("fav_uptake_cleaned_BM3.txt")
+countData <- read.table("orbfav_uptake_counts.txt")
 head(countData)
 ```
 - All data were previously filtered for a base mean of 3
@@ -26,10 +28,30 @@ length(countData[,1])
 ```{r}
 totalCounts=colSums(countData)
 totalCounts
-barplot(totalCounts, col=c("green",  "green", "green", "blue" , "blue" , "blue"), ylab="raw counts")
+barplot(totalCounts, col=c("green",  "green", "green", "green", "red", "red", "red", "blue", "blue" , "blue" , "blue"), ylab="raw counts")
 min(totalCounts)
 max(totalCounts)
+
+oldColNames = colnames(countData)
+
+newCounts = countData %>% 
+  dplyr::select(-BR.D.fav_uptake_S4_L007_R1_001.fastq.trim.sam.counts, -CR.A.fav_uptake_S5_L007_R1_001.fastq.trim.sam.counts, -CR.B.fav_uptake_S6_L007_R1_001.fastq.trim.sam.counts, -CR.C.fav_uptake_S7_L007_R1_001.fastq.trim.sam.counts, -DR.B.fav_uptake_S9_L007_R1_001.fastq.trim.sam.counts)
+
+head(newCounts)
+colnames(newCounts)
+newColNames = c("BR.A", "BR.B", "BR.C", "DR.A", "DR.C", "DR.D")
+
+
+#1 2 3 8 10 11
+
 ```
+```{r}
+colnames(newCounts)=paste(newColNames)
+totalCounts=colSums(newCounts)
+barplot(totalCounts, col=c("green", "green", "green", "blue" , "blue" , "blue"), ylab="Raw Counts")
+```
+
+
 - What we see from the above barplot is that some of our samples have high count numbers (BR.C, DR.A, and DR.C) but others have very low count data (BR.A, BR.B, annd DR.B). Keep this count data in mind as it will be very important when analying the differential expression of genes between coral hosting B and coral hosting D
 
 - Now create the vector "treat" of each strain
