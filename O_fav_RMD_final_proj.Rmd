@@ -8,11 +8,14 @@ output:
 - Load the proper packages
 
 ```{r results="hide", message=FALSE, warning=FALSE}
-setwd("/Users/mariaingersoll/Desktop/BU Research/Davies-Gilmore")
+install.packages("DESeq2")
+setwd("~/BI 586/FinalProject/")
 library("DESeq2")
 library("ggplot2")
 library("tidyverse")
 library("dplyr")
+library("arrayQualityMetrics")
+
 ```
 - Read in counts using read.table, of pre-filtered count data. The function read.table reads a file in table format and creates a data frame from it (cases corresponding to lines and variables to fields in the file)
 ```{r}
@@ -45,7 +48,7 @@ newColNames = c("BR.A", "BR.B", "BR.C", "DR.A", "DR.C", "DR.D")
 #1 2 3 8 10 11
 
 ```
-```{r}
+```{r, echo=FALSE, fig.cap="Figure 1. Raw Counts of O.Fav where BR are coral have taken up symbiodinicae B and DR are coral that have taken up symbiodinicae D."}
 colnames(newCounts)=paste(newColNames)
 totalCounts=colSums(newCounts)
 barplot(totalCounts, col=c("green", "green", "green", "blue" , "blue" , "blue"), ylab="Raw Counts")
@@ -68,9 +71,20 @@ colData
 - run DESeqDataSetFromMatrix and name it dds with countData for matrix input, colData for columns, and "treat" to dictate how the counts for each gene depend on the variables in colData
 - then run DESeq on dds
 ```{r results="hide", message=FALSE}
-dds<-DESeqDataSetFromMatrix(countData=countData, colData=colData, design=~treat)
+dds<-DESeqDataSetFromMatrix(countData=newCounts, colData=colData, design=~treat)
 dds<-DESeq(dds)
 ```
+
+```{r}
+vsd.ge=assay(vst(dds))
+rl=vst(dds)
+e=ExpressionSet(assay(rl), AnnotatedDataFrame(as.data.frame(colData(rl))))
+v = setwd("~/BI 586/FinalProject/outliers")
+arrayQualityMetrics(e,outdir=v,intgroup=c("treat"),force=T)
+```
+
+
+
 ```{r}
 head(dds)
 res<- results(dds)
@@ -80,7 +94,9 @@ res<- results(dds)
 - The name provided in the second element (B) is the baseline
 
 -Next look at the dispersions plot, which basically just tells you the spread of your data
-```{r}
+
+
+```{r, echo=FALSE, fig.cap="Figure 2. Dispersion plot uptake"}
 plotDispEsts(dds, main="Dispersion plot Uptake")
 ```
 
@@ -90,8 +106,12 @@ plotDispEsts(dds, main="Dispersion plot Uptake")
 ```{r}
 rld <- rlogTransformation(dds, blind=TRUE)
 head(assay(rld))
+
+```
+```{r, echo=FALSE, fig.cap="Figure 3. Histogram of r-log transformations"}
 hist(assay(rld))
 ```
+
 
 - The assay function allows you to access the matrix-like data, so that you can view it bc head(rld) gives you just a summary
 - The histogram above displays the frequency of each binned rld count value
@@ -109,7 +129,7 @@ sampleDists <- as.matrix(dist(t(assay(rld))))
 library(gplots)
 ```
 
-```{r}
+```{r, echo=FALSE, fig.cap="Figure 5. Sample distance heatmap where BR.C is clustering more with D."}
 heatmap.2(as.matrix(sampleDists), key=F, trace="none",
           col=colorpanel(100, "black", "white"),
           margin=c(10, 10))
@@ -127,8 +147,12 @@ resBD <- results(dds, contrast=c("treat","D","B"))
 ```{r}
 table(resBD$padj<0.1)
 summary(resBD)
+```
+```{r, echo=FALSE, fig.cap="Figure 6. MA plot between B and D."}
 plotMA(resBD, main="B vs D")
 ```
+
+
 
 - Now make a table of the differential expression values (log2fc) between B and D
 ```{r}
@@ -173,12 +197,12 @@ table(complete.cases(rldpvals))
 ```
 - Create a new csv file from rldpvals
 ```{r}
-write.csv(rldpvals, "timmy_uptake_RLDandPVALS.csv", quote=F)
+write.csv(rldpvals, "BI586_uptake_RLDandPVALS.csv", quote=F)
 ```
 - Now we will create a heatmap of sample distances based on pvalues
 - Make a new variable for your csv file
 ```{r}
-rldpvals <- read.csv(file="timmy_uptake_RLDandPVALS.csv", row.names=1)
+rldpvals <- read.csv(file="BI586_uptake_RLDandPVALS.csv", row.names=1)
 head(rldpvals)
 ```
 - Make rld that a variable that just returns the first six columns with values (rownames then columns 1-6)
@@ -206,7 +230,7 @@ heat.colors = colorRampPalette(rev(c("blue","yellow")),bias=0.3)(100)
 quartz()
 ```
 - Apply your matrix of overall expression distance to a heatmap
-```{r}
+```{r, echo=FALSE, fig.cap="Figure 7. Sample Distance Matrix between B and D."}
 pheatmap(sampleDistMatrix,color = heat.colors,cex=0.9,border_color=NA,cluster_rows=T,cluster_cols=T)
 ```
 
@@ -218,17 +242,19 @@ library(ggrepel)
 library(tidyverse)
 ```
 - Now going to perform PCA on the data to visualize overall effect of experimental covariates and batch effects
-- t hides all the columns somehow and just shows the gene identifiers?? I'm not really sure tho, maybe just shows me the rownames
+- t transposes the rld table and makes all the rows columns, and the columns rows. So here the isoform names that were rownames are now the column names. 
 ```{r}
 rld_t=t(rld)
 head(rld)
 ```
+
+
 ```{r results="hide"}
 head(rld_t)
 ```
 - prcomp performs a pca on given data matrix and returns results as an object of class prcomp
 ```{r results="hide", warning=FALSE}
-pca <- prcomp(rld_t,center = TRUE, scale. = TRUE, na.action=na.omit)
+pca <- prcomp(rld_t,center = TRUE, na.action=na.omit)
 head(pca)
 ```
 
@@ -257,7 +283,7 @@ head(pca_s)
 ```
 - Creating your PCA plot
 - aes is aesthetic mappings, how variables are mapped to visual properties
-```{r}
+```{r, echo=FALSE, fig.cap="Figure 8. Principal Component Analysis of B vs D."}
 cbPalette <- c("darkorchid4","firebrick4")
 ggplot(pca_s, aes(PC1, PC2, color = treat, pch = treat)) +
   geom_point(size=3) +
@@ -270,12 +296,70 @@ ggplot(pca_s, aes(PC1, PC2, color = treat, pch = treat)) +
   ylab(paste0("PC2: ",pc2v,"% variance")) 
 ```
 
-- You can see from this plot that the B samples have very high variance and that there's some overlap between the samples
+- You can see from this plot that the B samples have very high variance and that there's no overlap between the samples
 
 - I'm skipping the adonis part because it gave me an error and doesn't seem that important
 
 
+```{r}
+library(vegan)
+adonis(pca$x ~ treat, data = pca_s, method='eu', na.rm = TRUE)
+```
 
+Permutation: free
+Number of permutations: 719
+
+Terms added sequentially (first to last)
+
+          Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)
+treat      1    6375.9  6375.9  1.2256 0.23454    0.2
+Residuals  4   20809.1  5202.3         0.76546       
+Total      5   27185.0                 1.00000  
+
+
+```{r}
+colData$D<-factor(colData$treat, levels=c("D","B"))
+
+resD <- results(dds, contrast=c("treat","D","B"))
+#how many FDR < 10%?
+table(resD$padj<0.01)
+#FALSE  TRUE 
+# 3294     4 
+summary(resD)
+
+nrow(resD[resD$padj<0.05 & !is.na(resD$padj),])  # Num significantly differentially expressed genes excluding the no/low count genes   #20
+
+dev.off()
+plotMA(resD, main="B vs D")
+plotMA(resD, main="B vs D", ylim=c(-2,2))
+
+results <- as.data.frame(resD)
+head(results)
+
+nrow(resD[resD$padj<0.1 & resD$log2FoldChange > 0 & !is.na(resD$padj),])
+
+nrow(resD[resD$padj<0.1 & resD$log2FoldChange < 0 & !is.na(resD$padj),])
+#UP 2
+#DOWN 27
+
+write.table(resD, file="D_2021.txt", quote=F, sep="\t")
+cd <- read.table("D_2021.txt")
+head(cd)
+head(cd)
+
+library(dplyr)
+cd
+go_input_D = cd %>%
+  tibble::rownames_to_column(var = "iso") %>%
+  mutate(mutated_p = -log(pvalue)) %>%
+  mutate(mutated_p_updown = ifelse(log2FoldChange < 0, mutated_p*-1, mutated_p*1)) %>%
+  na.omit() %>%
+  select(iso, mutated_p_updown)
+head(go_input_D)
+colnames(go_input_D) <- c("gene", "pval")
+head(go_input_D)
+write.csv(go_input_D, file="D_GO.csv", quote=F, row.names=FALSE)
+```
 
 
 ACTUAL DIFFERENTIAL GENE EXPRESSION ANALYSIS STARTS HERE
