@@ -387,6 +387,7 @@ BD_DE_GO = read.csv("D_GO.csv")
 - go.obo is downloaded from http://www.geneontology.org/GO.downloads.ontology.shtml
 - goDivision is either MF, BP, or CC
 
+CONTROL REPLACE ofav to isogroup in D_GO.CSV so they can be linked to the go annotations file
 ```{r}
 head(read.csv("D_GO.csv"))
 input="D_GO.csv"
@@ -408,6 +409,8 @@ gomwuStats(input, goDatabase, goAnnotations, goDivision,
            smallest=5,
            clusterCutHeight=0.25)
 ```
+NEW TRANSCRIPTOME: 18  GO terms at 10% FDR
+
 - Returned 9 GO terms at 10% FDR
 - Plot results in a dendrogram
 - absValue=-log(0.05,10); genes with the measure value exceeding this will be counted as "good genes". Specify absValue=0.001 if you are doing Fisher's exact test for standard GO enrichment or analyzing a WGCNA module (all non-zero genes = "good genes").
@@ -437,9 +440,9 @@ resultsMF
 
 - Now let's run the above protocol for BP
 ```{r}
-head(read.csv("BD_DE_GO.csv"))
-input="BD_DE_GO.csv"
-goAnnotations="orb_fav_iso2go.txt"
+head(read.csv("D_GO.csv"))
+input="D_GO.csv"
+goAnnotations="orb_fav_iso2go_new.tab"
 goDatabase="go.obo"
 goDivision="BP"
 source("gomwu.functions.R")
@@ -450,7 +453,7 @@ gomwuStats(input, goDatabase, goAnnotations, goDivision,
            smallest=5,
            clusterCutHeight=0.25)
 ```
-
+NEW TRANSCRIPTOME: 10 GO Terms at 10% FDR 
 
 ```{r warning=FALSE}
 quartz()
@@ -470,9 +473,9 @@ resultsBP
 
 - Now let's run it for CC
 ```{r}
-head(read.csv("BD_DE_GO.csv"))
-input="BD_DE_GO.csv"
-goAnnotations="orb_fav_iso2go.txt"
+head(read.csv("D_GO.csv"))
+input="D_GO.csv"
+goAnnotations="orb_fav_iso2go_new.tab"
 goDatabase="go.obo"
 goDivision="CC"
 source("gomwu.functions.R")
@@ -483,6 +486,7 @@ gomwuStats(input, goDatabase, goAnnotations, goDivision,
            smallest=5,
            clusterCutHeight=0.25)
 ```
+NEW TRANSCRIPTOME: 23  GO terms at 10% FDR
 
 
 ```{r warning=FALSE}
@@ -512,27 +516,34 @@ INVESTIGATING DIFFERENTIAL EXPRESSION OF GENES IN SPECIFIC GO CATEGORIES
 library(tidyverse)
 library(dplyr)
 ```
+
+
 ```{r}
-iso2go = read.delim("orb_fav_iso2go.txt")
+iso2go = read.table("orb_fav_iso2go_new.tab", sep="\t")
 head(iso2go)
+colnames(iso2go) <- c("gene_ID", "GO.terms")
 ```
 - Obtain the gene symbol from the gene descriptions in the file orb_fav_iso2gene.tab
 - Create the variable gene which contains the gene id, the full description, and the gene symbol
 ```{r}
-gene = read.delim("orb_fav_iso2gene.tab", sep = "\t")%>%
-       mutate(gene_symbol = gsub(".* GN=", "", Description)) %>%
+newnames = c("gene_ID", "description" )
+iso2gene = read.table("orb_fav_iso2gene_new.tab", sep="\t")
+colnames(iso2gene) <- newnames
+
+gene = iso2gene %>%
+       mutate(gene_symbol = gsub(".* GN=", "", description)) %>%
        mutate(gene_symbol = gsub(" .*", "", gene_symbol))
        
 head(gene)
 ```
 - To get the rlog foldchange values, I'm going to manipulate the timmy uptake file (which I will save in a variable called BD_DE)
 ```{r}
-head(read.csv("timmy_uptake_RLDandPVALS.csv"))
-BD_DE = read.csv("timmy_uptake_RLDandPVALS.csv")
+head(read.csv("BI586_uptake_RLDandPVALS.csv"))
+BD_DE = read.csv("BI586_uptake_RLDandPVALS.csv")
 
 head(BD_DE)
 rlog_BD = BD_DE[,1:7] %>%
-  rename(Gene_id = X)
+  rename(gene_ID = X)
 head(rlog_BD)
 ```
 - rlog_BD just has the isoform names (called Gene_id) and the log2FC for each sample
@@ -667,16 +678,18 @@ heatmap_oxidoreductase_sig = heatmap.2(as.matrix(explc_oxr), col = col0, Rowv = 
 BD_DE_05 = filter(BD_DE, pval.BD <= 0.05, preserve = TRUE)
 head(BD_DE_05) 
 rlog_BD_05 = BD_DE_05[,1:7] %>%
-  rename(Gene_id = X)
+  rename(gene_ID = X)
 head(rlog_BD_05)
 ```
+
+
 ```{r}
 sigDEG_BD = iso2go %>%
   left_join(rlog_BD_05) %>%
   left_join(gene) %>%
   mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %>%
   column_to_rownames(var = "gene_symbol") %>%
-  dplyr::select(-GO.terms, -Description, -Gene_id) %>%
+  dplyr::select(-GO.terms, -description, -gene_ID) %>%
   drop_na() %>%
   dplyr::select(sort(current_vars()))
 head(sigDEG_BD)
@@ -685,6 +698,7 @@ nrow(sigDEG_BD)
 - sigDEG_BD are all my significant DEGs between B and D in the right format with alpha of 0.05
 - First making a heatmap of the raw values
 ```{r}
+library(gplots)
 heatmap_sigDEG = heatmap.2(as.matrix(sigDEG_BD), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
                            dendrogram = "both",
                            trace = "none",
