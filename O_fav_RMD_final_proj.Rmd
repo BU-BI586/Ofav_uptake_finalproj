@@ -48,7 +48,9 @@ newColNames = c("BR.A", "BR.B", "BR.C", "DR.A", "DR.C", "DR.D")
 #1 2 3 8 10 11
 
 ```
-```{r, echo=FALSE, fig.cap="Figure 1. Raw Counts of O.Fav where BR are coral have taken up symbiodinicae B and DR are coral that have taken up symbiodinicae D."}
+
+
+```{r, echo=FALSE, fig.cap="**Figure 1.** Raw sequencing count values from each Orbicella faveolata sample demonstrating various degrees of library sizes. Green bars are O. faveolata hosting Symbiodiniaceae strain B01 (triplicates: BR.A, BR.B, BR.C). Blue bars are O. faveolata hosting Symbiodiniaceae strain D (triplicates: DR.A, DR.C, DR.D). One replicate from the strain D condition and all replicates from O. faveolata hosting Symbiodiniaceae strain C were removed prior to this analysis due to small library sizes."}
 colnames(newCounts)=paste(newColNames)
 totalCounts=colSums(newCounts)
 barplot(totalCounts, col=c("green", "green", "green", "blue" , "blue" , "blue"), ylab="Raw Counts")
@@ -374,8 +376,9 @@ ACTUAL DIFFERENTIAL GENE EXPRESSION ANALYSIS STARTS HERE
 - BD_DE_GO has the -log(p-values)
 - From the timmy_uptake file, we got log2 fold change (MLE): treat D vs B
 - Reminder: this means that pos log2FC values indicate D is upregulated compared to B; The name provided in the second element (B) is the baseline
+
 ```{r}
-BD_DE_GO = read.csv("BD_DE_GO.csv")
+BD_DE_GO = read.csv("D_GO.csv")
 ```
 - Creating dendrograms (more info can be found in the r file GO_MWU.R)
 - First, run MF; edit the input stuff to match what you're running
@@ -383,14 +386,16 @@ BD_DE_GO = read.csv("BD_DE_GO.csv")
 - orb_fav_iso2go.txt is two-column, tab-delimited, one line per gene, multiple GO terms separated by semicolon. If you have multiple lines per gene, use nrify_GOtable.pl prior to running this script.
 - go.obo is downloaded from http://www.geneontology.org/GO.downloads.ontology.shtml
 - goDivision is either MF, BP, or CC
+
 ```{r}
-head(read.csv("BD_DE_GO.csv"))
-input="BD_DE_GO.csv"
-goAnnotations="orb_fav_iso2go.txt"
+head(read.csv("D_GO.csv"))
+input="D_GO.csv"
+goAnnotations="orb_fav_iso2go_new.tab"
 goDatabase="go.obo"
 goDivision="MF"
 source("gomwu.functions.R")
 ```
+
 - Calculating stats. It might take ~3 min for MF and BP. Do not rerun it if you just want to replot the data with different cutoffs, go straight to gomwuPlot. If you change any of the numeric values below, delete the files that were generated in previous runs first.
 - perlPath: replace with full path to perl executable if it is not in your system's PATH already
 - largest: a GO category will not be considered if it contains more than this fraction of the total number of genes
