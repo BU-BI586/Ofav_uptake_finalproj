@@ -1,34 +1,77 @@
 ---
-title: "Davies Rotation OrbFav Reuptake"
+title: "Orbicella Faveolata Reuptake"
+author: "Maria Ingersoll, Jamie Poirer, Susritha Kopparapu"
+date: "4/29/2021"
 output:
   html_document: default
-  pdf_document: default
 ---
-- Set your working directory; if your files are in folders, you have to specify the command to enter the folder with a slash
-- Load the proper packages
 
-```{r results="hide", message=FALSE, warning=FALSE}
-install.packages("DESeq2")
-setwd("~/BI 586/FinalProject/")
-library("DESeq2")
-library("ggplot2")
-library("tidyverse")
-library("dplyr")
-library("arrayQualityMetrics")
+
+## Introduction
+
+## Setup
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### R Version
+R version 4.0.2 was used for this analysis. 
+
+#### Packages
+The following packages were used to clean, analyze, and visualize data. Packages were installed with [Bioconductor](https://bioconductor.org/biocLite.R) version 3.12 or the [Cran Repository](http://cran.us.r-project.org).   
+```{r, message=FALSE, warning=FALSE}
+library("DESeq2")                   #Version 1.30.1
+library("arrayQualityMetrics")      #Version 3.46.0
+library("dplyr")                    #Version 1.0.5
+library("RColorBrewer")             #Version 1.1.2
+library("gplots")                   #Version 3.1.1
+library("tidyverse")                #Version 1.3.0
+library("pheatmap")                 #Version 1.0.12
+library("vegan")                    #Version 2.5.7
+library("ggplot2")                  #Version 3.3.3
+library("ggrepel")                  #Version 0.9.1
+
+#--------------
+library("affycoretools")            #Version 1.60.1
+library("genefilter")               #Version 1.70.0
+```
+
+```{r, eval=FALSE, echo=FALSE}
+packageVersion("DESeq2")
+packageVersion("arrayQualityMetrics")
+packageVersion("dplyr")
+packageVersion("RColorBrewer")
+packageVersion("gplots")
+packageVersion("tidyverse")
+packageVersion("pheatmap")
+packageVersion("vegan")
+packageVersion("ggplot2")
+packageVersion("ggrepel")
+
+
+#packageVersion("affycoretools")
+#packageVersion("genefilter")
 
 ```
+
+## Setup
+```{r, echo=FALSE}
+setwd("~/BI 586/FinalProject/")
+```
+
 - Read in counts using read.table, of pre-filtered count data. The function read.table reads a file in table format and creates a data frame from it (cases corresponding to lines and variables to fields in the file)
-```{r}
+```{r,eval=FALSE}
 countData <- read.table("orbfav_uptake_counts.txt")
 head(countData)
 ```
 - All data were previously filtered for a base mean of 3
 - Now determine the length of the data file 
-```{r}
+```{r,eval=FALSE}
 length(countData[,1])
 ```
 - Get and plot total counts data for each reinfection experiment
-```{r}
+```{r, eval=FALSE}
 totalCounts=colSums(countData)
 totalCounts
 barplot(totalCounts, col=c("green",  "green", "green", "green", "red", "red", "red", "blue", "blue" , "blue" , "blue"), ylab="raw counts")
@@ -50,7 +93,7 @@ newColNames = c("BR.A", "BR.B", "BR.C", "DR.A", "DR.C", "DR.D")
 ```
 
 
-```{r, echo=FALSE, fig.cap="**Figure 1.** Raw sequencing count values from each Orbicella faveolata sample demonstrating various degrees of library sizes. Green bars are O. faveolata hosting Symbiodiniaceae strain B01 (triplicates: BR.A, BR.B, BR.C). Blue bars are O. faveolata hosting Symbiodiniaceae strain D (triplicates: DR.A, DR.C, DR.D). One replicate from the strain D condition and all replicates from O. faveolata hosting Symbiodiniaceae strain C were removed prior to this analysis due to small library sizes."}
+```{r, echo=FALSE, fig.cap="**Figure 1.** Raw sequencing count values from each Orbicella faveolata sample demonstrating various degrees of library sizes. Green bars are O. faveolata hosting Symbiodiniaceae strain B01 (triplicates: BR.A, BR.B, BR.C). Blue bars are O. faveolata hosting Symbiodiniaceae strain D (triplicates: DR.A, DR.C, DR.D). One replicate from the strain D condition and all replicates from O. faveolata hosting Symbiodiniaceae strain C were removed prior to this analysis due to small library sizes.", eval=FALSE}
 colnames(newCounts)=paste(newColNames)
 totalCounts=colSums(newCounts)
 barplot(totalCounts, col=c("green", "green", "green", "blue" , "blue" , "blue"), ylab="Raw Counts")
@@ -62,7 +105,7 @@ barplot(totalCounts, col=c("green", "green", "green", "blue" , "blue" , "blue"),
 - Now create the vector "treat" of each strain
 - Then turn the vector "treat" into a dataframe called "g"
 - Rename the dataframe "colData"
-```{r}
+```{r, eval=FALSE}
 treat=c( "B", "B", "B", "D", "D", "D")
 g=data.frame(treat)
 g
@@ -72,12 +115,12 @@ colData
 
 - run DESeqDataSetFromMatrix and name it dds with countData for matrix input, colData for columns, and "treat" to dictate how the counts for each gene depend on the variables in colData
 - then run DESeq on dds
-```{r results="hide", message=FALSE}
+```{r results="hide", message=FALSE, eval=FALSE}
 dds<-DESeqDataSetFromMatrix(countData=newCounts, colData=colData, design=~treat)
 dds<-DESeq(dds)
 ```
 
-```{r}
+```{r, eval=FALSE}
 vsd.ge=assay(vst(dds))
 rl=vst(dds)
 e=ExpressionSet(assay(rl), AnnotatedDataFrame(as.data.frame(colData(rl))))
@@ -87,7 +130,7 @@ arrayQualityMetrics(e,outdir=v,intgroup=c("treat"),force=T)
 
 
 
-```{r}
+```{r, eval=FALSE}
 head(dds)
 res<- results(dds)
 ```
@@ -98,19 +141,19 @@ res<- results(dds)
 -Next look at the dispersions plot, which basically just tells you the spread of your data
 
 
-```{r, echo=FALSE, fig.cap="Figure 2. Dispersion plot uptake"}
+```{r, echo=FALSE, fig.cap="Figure 2. Dispersion plot uptake", eval=FALSE}
 plotDispEsts(dds, main="Dispersion plot Uptake")
 ```
 
 - Now we are going to retrieve the rlog data, which will give us better transformation when size factors vary across samples
 - regularized log transformation, transforms count data to log2 scale to minimize differences between samples for rows with small counts
 
-```{r}
+```{r, eval=FALSE}
 rld <- rlogTransformation(dds, blind=TRUE)
 head(assay(rld))
 
 ```
-```{r, echo=FALSE, fig.cap="Figure 3. Histogram of r-log transformations"}
+```{r, echo=FALSE, fig.cap="Figure 3. Histogram of r-log transformations", eval=FALSE}
 hist(assay(rld))
 ```
 
@@ -118,20 +161,16 @@ hist(assay(rld))
 - The assay function allows you to access the matrix-like data, so that you can view it bc head(rld) gives you just a summary
 - The histogram above displays the frequency of each binned rld count value
 
-- Load the library RColorBrewer
-```{r}
-library(RColorBrewer)
-```
+
 - Making a sample distance heatmap
 - as.matrix attempts to turn its argument into a matrix
 - dist computes and returns the distance matrix computed using the specified distance measure to compute distances between the rows of a data matrix (assay(rld))
 - Create a sample heatmap of the relatedness based on the count distance/difference between samples
-```{r results="hide", message=FALSE}
+```{r results="hide", message=FALSE, eval=FALSE}
 sampleDists <- as.matrix(dist(t(assay(rld))))
-library(gplots)
 ```
 
-```{r, echo=FALSE, fig.cap="Figure 5. Sample distance heatmap where BR.C is clustering more with D."}
+```{r, echo=FALSE, fig.cap="Figure 5. Sample distance heatmap where BR.C is clustering more with D.", eval=FALSE}
 heatmap.2(as.matrix(sampleDists), key=F, trace="none",
           col=colorpanel(100, "black", "white"),
           margin=c(10, 10))
@@ -140,49 +179,46 @@ heatmap.2(as.matrix(sampleDists), key=F, trace="none",
 - Now look at results of dds comparing (average) B and D
 - The second term is the "control" we will use B as control in this case
 
-```{r}
+```{r, eval=FALSE}
 resBD <- results(dds, contrast=c("treat","D","B"))
 ```
 - How many gene counts have FDR < 10%
 - Analyze the count differences between B and D
 - This is all quality control
-```{r}
+```{r, eval=FALSE}
 table(resBD$padj<0.1)
 summary(resBD)
 ```
-```{r, echo=FALSE, fig.cap="Figure 6. MA plot between B and D."}
+
+```{r, echo=FALSE, fig.cap="Figure 6. MA plot between B and D.", eval=FALSE}
 plotMA(resBD, main="B vs D")
 ```
 
 
 
 - Now make a table of the differential expression values (log2fc) between B and D
-```{r}
+```{r, eval=FALSE}
 write.table(resBD, file="BD_DE.txt", quote=F, sep="\t")
 head(read.delim("BD_DE.txt"))
 ```
 - "BD_DE.txt" contains the log2FC, the pvalue, and the padj, as well as some other data that we don't really need
 
-- Load tidyverse
-```{r results="hide", message=FALSE}
-library(tidyverse)
-```
 - Get the p-values from your data file
 - Create valBD that is a table from resBD of just the pvalues and adjusted p-values (p-adj)
 - Then give the columns approprite names
-```{r}
+```{r, eval=FALSE}
 valBD=cbind(resBD$pvalue, resBD$padj)
 head(valBD)
 colnames(valBD)=c("pval.BD", "padj.BD")
 length(valBD[,1])
 ```
 - Return a logical vector in which both cases (pval and padj) are complete (no missing values)
-```{r}
+```{r, eval=FALSE}
 table(complete.cases(valBD))
 ```
 - Make a table (that you can visualize via assay) of the rlogdata and pvals
 - Then make the column names for rld the same ones that were in colData$treat
-```{r}
+```{r, eval=FALSE}
 rlog=rlogTransformation(dds, blind=TRUE) 
 rld=assay(rlog)
 head(rld)
@@ -191,71 +227,63 @@ head(rld)
 length(rld[,1])
 ```
 - Combine rld with your table of pval and padj values (valBD)
-```{r}
+```{r, eval=FALSE}
 rldpvals=cbind(rld,valBD)
 head(rldpvals)
 dim(rldpvals)
 table(complete.cases(rldpvals))
 ```
 - Create a new csv file from rldpvals
-```{r}
+```{r, eval=FALSE}
 write.csv(rldpvals, "BI586_uptake_RLDandPVALS.csv", quote=F)
 ```
 - Now we will create a heatmap of sample distances based on pvalues
 - Make a new variable for your csv file
-```{r}
+```{r, eval=FALSE}
 rldpvals <- read.csv(file="BI586_uptake_RLDandPVALS.csv", row.names=1)
 head(rldpvals)
 ```
 - Make rld that a variable that just returns the first six columns with values (rownames then columns 1-6)
-```{r}
+```{r, eval=FALSE}
 rld=rldpvals[,1:6]
 head(rld)
 ```
 - dist computes and returns the distance matrix computed using the specified distance measure to compute distances between the rows of a data matrix (rld); determine the overall differences in expression between each sample
 - Turn the distances into a matrix
-```{r}
+```{r,eval=FALSE}
 sampleDists <- dist(t(rld))
 sampleDistMatrix <- as.matrix(sampleDists)
 ```
 - Create a vector of treatment titles for the matrix and apply them to the rows and columns
-```{r}
+```{r, eval=FALSE}
 treat=c("B", "B", "B", "D", "D", "D")
 colnames(sampleDistMatrix)=paste(treat)
 rownames(sampleDistMatrix)=paste(treat)
 ```
 - Install some packages to make heatmaps
-```{r results="hide"}
-install.packages("pheatmap", repos='http://cran.us.r-project.org')
-library("pheatmap")
+```{r results="hide", eval=FALSE}
 heat.colors = colorRampPalette(rev(c("blue","yellow")),bias=0.3)(100)
 quartz()
 ```
 - Apply your matrix of overall expression distance to a heatmap
-```{r, echo=FALSE, fig.cap="Figure 7. Sample Distance Matrix between B and D."}
+```{r, echo=FALSE, fig.cap="Figure 7. Sample Distance Matrix between B and D.", eval=FALSE}
 pheatmap(sampleDistMatrix,color = heat.colors,cex=0.9,border_color=NA,cluster_rows=T,cluster_cols=T)
 ```
 
-- Load some more packages for the next steps (PCA)
-```{r results="hide", message=FALSE}
-library(vegan)
-library(ggplot2)
-library(ggrepel)
-library(tidyverse)
-```
+
 - Now going to perform PCA on the data to visualize overall effect of experimental covariates and batch effects
 - t transposes the rld table and makes all the rows columns, and the columns rows. So here the isoform names that were rownames are now the column names. 
-```{r}
+```{r,eval=FALSE}
 rld_t=t(rld)
 head(rld)
 ```
 
 
-```{r results="hide"}
+```{r results="hide",eval=FALSE}
 head(rld_t)
 ```
 - prcomp performs a pca on given data matrix and returns results as an object of class prcomp
-```{r results="hide", warning=FALSE}
+```{r results="hide", warning=FALSE, eval=FALSE}
 pca <- prcomp(rld_t,center = TRUE, na.action=na.omit)
 head(pca)
 ```
@@ -263,19 +291,19 @@ head(pca)
 - sdev is the standard deviations of the principal components
 - Using the sdev, calculate the proportion that each PC corresponds to the variance
 - Then round PC1 and PC2 (times 100, to 1 sigfig)
-```{r}
+```{r,eval=FALSE}
 li <- pca$sdev^2 / sum(pca$sdev^2)
 pc1v <- round(li[1] * 100, 1)
 pc2v <- round(li[2] * 100, 1)
 ```
 - x from prcomp seems like it's the coordinates of each treatment in the PCA
 - turn pca$x into a dataframe
-```{r}
+```{r,eval=FALSE}
 pca_s <- as.data.frame(pca$x)
 head(pca_s)
 ```
 - Just take PC1 and PC2 and add your sample and treatment names
-```{r}
+```{r,eval=FALSE}
 pca_s <- pca_s[,c(1,2)]
 head(pca_s)
 pca_s$Samples = row.names(pca_s)
@@ -285,7 +313,7 @@ head(pca_s)
 ```
 - Creating your PCA plot
 - aes is aesthetic mappings, how variables are mapped to visual properties
-```{r, echo=FALSE, fig.cap="Figure 8. Principal Component Analysis of B vs D."}
+```{r, echo=FALSE, fig.cap="Figure 8. Principal Component Analysis of B vs D.", eval=FALSE}
 cbPalette <- c("darkorchid4","firebrick4")
 ggplot(pca_s, aes(PC1, PC2, color = treat, pch = treat)) +
   geom_point(size=3) +
@@ -303,8 +331,7 @@ ggplot(pca_s, aes(PC1, PC2, color = treat, pch = treat)) +
 - I'm skipping the adonis part because it gave me an error and doesn't seem that important
 
 
-```{r}
-library(vegan)
+```{r,eval=FALSE}
 adonis(pca$x ~ treat, data = pca_s, method='eu', na.rm = TRUE)
 ```
 
@@ -319,7 +346,7 @@ Residuals  4   20809.1  5202.3         0.76546
 Total      5   27185.0                 1.00000  
 
 
-```{r}
+```{r,eval=FALSE}
 colData$D<-factor(colData$treat, levels=c("D","B"))
 
 resD <- results(dds, contrast=c("treat","D","B"))
@@ -349,7 +376,6 @@ cd <- read.table("D_2021.txt")
 head(cd)
 head(cd)
 
-library(dplyr)
 cd
 go_input_D = cd %>%
   tibble::rownames_to_column(var = "iso") %>%
@@ -377,7 +403,7 @@ ACTUAL DIFFERENTIAL GENE EXPRESSION ANALYSIS STARTS HERE
 - From the timmy_uptake file, we got log2 fold change (MLE): treat D vs B
 - Reminder: this means that pos log2FC values indicate D is upregulated compared to B; The name provided in the second element (B) is the baseline
 
-```{r}
+```{r,eval=FALSE}
 BD_DE_GO = read.csv("D_GO.csv")
 ```
 - Creating dendrograms (more info can be found in the r file GO_MWU.R)
@@ -388,7 +414,7 @@ BD_DE_GO = read.csv("D_GO.csv")
 - goDivision is either MF, BP, or CC
 
 CONTROL REPLACE ofav to isogroup in D_GO.CSV so they can be linked to the go annotations file
-```{r}
+```{r,eval=FALSE}
 head(read.csv("D_GO.csv"))
 input="D_GO.csv"
 goAnnotations="orb_fav_iso2go_new.tab"
@@ -402,7 +428,7 @@ source("gomwu.functions.R")
 - largest: a GO category will not be considered if it contains more than this fraction of the total number of genes
 - smallest: a GO category should contain at least this many genes to be considered
 - clusterCutHeight: threshold for merginng similar (gene-sharing) terms. See gomwu README for details
-```{r}
+```{r,eval=FALSE}
 gomwuStats(input, goDatabase, goAnnotations, goDivision,
            perlPath="perl",
            largest=0.1,
@@ -421,7 +447,7 @@ NEW TRANSCRIPTOME: 18  GO terms at 10% FDR
 - treeHeight=0.5: height of the hierarchical clustering tree
 - colors=c("dodgerblue2","firebrick1","skyblue","lightcoral") # these are default colors, un-remark and change if needed
 - Typing resultsMF gives you the data in a written format
-```{r warning=FALSE}
+```{r, warning=FALSE, eval=FALSE}
 quartz()
 resultsMF=gomwuPlot(input,goAnnotations,goDivision,
                   absValue=1,
@@ -439,7 +465,7 @@ resultsMF
 - The GO term we are most interested in here is Oxidoreductase, remember this for later
 
 - Now let's run the above protocol for BP
-```{r}
+```{r,eval=FALSE}
 head(read.csv("D_GO.csv"))
 input="D_GO.csv"
 goAnnotations="orb_fav_iso2go_new.tab"
@@ -455,7 +481,7 @@ gomwuStats(input, goDatabase, goAnnotations, goDivision,
 ```
 NEW TRANSCRIPTOME: 10 GO Terms at 10% FDR 
 
-```{r warning=FALSE}
+```{r, warning=FALSE, eval=FALSE}
 quartz()
 resultsBP=gomwuPlot(input,goAnnotations,goDivision,
                   absValue=1,
@@ -472,7 +498,7 @@ resultsBP
 - Here we are interested in the positive regulation of cell proliferation
 
 - Now let's run it for CC
-```{r}
+```{r,eval=FALSE}
 head(read.csv("D_GO.csv"))
 input="D_GO.csv"
 goAnnotations="orb_fav_iso2go_new.tab"
@@ -489,7 +515,7 @@ gomwuStats(input, goDatabase, goAnnotations, goDivision,
 NEW TRANSCRIPTOME: 23  GO terms at 10% FDR
 
 
-```{r warning=FALSE}
+```{r, warning=FALSE, eval=FALSE}
 quartz()
 resultsCC=gomwuPlot(input,goAnnotations,goDivision,
                   absValue=1,
@@ -512,20 +538,16 @@ INVESTIGATING DIFFERENTIAL EXPRESSION OF GENES IN SPECIFIC GO CATEGORIES
 - First, looking at positive regulation of cell proliferation (from BP, GO:0008284)
 - Load packages
 - Set up the variable iso2go which contains the ofav gene id and all of its associated GO terms
-```{r results="hide", message=FALSE}
-library(tidyverse)
-library(dplyr)
-```
 
 
-```{r}
+```{r, eval=FALSE}
 iso2go = read.table("orb_fav_iso2go_new.tab", sep="\t")
 head(iso2go)
 colnames(iso2go) <- c("gene_ID", "GO.terms")
 ```
 - Obtain the gene symbol from the gene descriptions in the file orb_fav_iso2gene.tab
 - Create the variable gene which contains the gene id, the full description, and the gene symbol
-```{r}
+```{r,eval = FALSE}
 newnames = c("gene_ID", "description" )
 iso2gene = read.table("orb_fav_iso2gene_new.tab", sep="\t")
 colnames(iso2gene) <- newnames
@@ -537,7 +559,7 @@ gene = iso2gene %>%
 head(gene)
 ```
 - To get the rlog foldchange values, I'm going to manipulate the timmy uptake file (which I will save in a variable called BD_DE)
-```{r}
+```{r,eval=FALSE}
 head(read.csv("BI586_uptake_RLDandPVALS.csv"))
 BD_DE = read.csv("BI586_uptake_RLDandPVALS.csv")
 
@@ -550,7 +572,7 @@ head(rlog_BD)
 - could have also used the tidyverse select function instead of [,1:7] here, Dan says it's better to keep the same format so using select would have been better
 
 - Next, make a variable that contains all the genes that correspond to GO:0008284
-```{r warning=FALSE}
+```{r, warning=FALSE, eval=FALSE}
 GO_0008284 = iso2go %>%
   filter(str_detect(GO.terms, "GO:0008284")) %>%
   left_join(rlog_BD) %>%
@@ -561,14 +583,14 @@ GO_0008284 = iso2go %>%
   drop_na() %>%
   dplyr::select(sort(current_vars()))
 ```
-```{r}
+
+```{r, eval=FALSE}
 head(GO_0008284)
 colnames(rlog_BD)
 ```
 
 - Plot a heatmap of the differential expression of ALL the genes that correspond to GO_0008284 pos reg of cell prolif
-```{r}
-library(gplots)
+```{r,eval=FALSE}
 heatmap_GO_0008284 = heatmap.2(as.matrix(GO_0008284), Rowv = TRUE, Colv = FALSE, scale = "row",
           dendrogram = "both",
           trace = "none",
@@ -581,7 +603,7 @@ heatmap_GO_0008284 = heatmap.2(as.matrix(GO_0008284), Rowv = TRUE, Colv = FALSE,
 - Now doing the same for oxidoreductase
 - Oxidoreductase complex from CC (GO:1990204); oxidoreductase activity (GO:0016491); oxidoreductase activity, acting on paired donors etc. (GO:0016715)
 - To filter for multiple terms, use | (the symbol that is shift back slash) and quotes only outside all the terms
-```{r}
+```{r,eval=FALSE}
 oxidoreductase = iso2go %>%
   filter(str_detect(GO.terms, "GO:1990204|GO:0016491|GO:0016715")) %>%
   left_join(rlog_BD) %>%
@@ -594,7 +616,7 @@ oxidoreductase = iso2go %>%
 head(oxidoreductase)
 ```
 Plot a heatmap of the differential expression of ALL the genes that correspond to the oxidoreductase GO terms above
-```{r}
+```{r,eval=FALSE}
 heatmap_oxidoreductase = heatmap.2(as.matrix(oxidoreductase), Rowv = TRUE, Colv = TRUE, scale = "row",
                                dendrogram = "both",
                                trace = "none",
@@ -609,7 +631,7 @@ heatmap_oxidoreductase = heatmap.2(as.matrix(oxidoreductase), Rowv = TRUE, Colv 
 - Now we want to make new heatmaps of just those genes in cell prolif and oxidoreductase that are significantly differentially expressed (we will use an alpha of 0.1)
 
 - Filter the timmy uptake data for all genes significantly differentially expressed (alpha = 0.1 for this section, we will use the more stringent 0.05 later)
-```{r}
+```{r,eval=FALSE}
 BD_DE_10 = filter(BD_DE, pval.BD <= 0.1, preserve = TRUE)
 head(BD_DE_10) 
 rlog_BD_10 = BD_DE_10[,1:7] %>%
@@ -619,7 +641,7 @@ head(rlog_BD_10)
 - rlog_BD_10 has all the genes that are sig DE with alpha=0.1 and does not contain the p-val nor the adj p-val
 
 - Now search within this list for all genes that correspond to the GO term for pos reg of cell prolif and call this new list GO_0008284_sig
-```{r}
+```{r,eval=FALSE}
 GO_0008284_sig = iso2go %>%
   filter(str_detect(GO.terms, "GO:0008284")) %>%
   left_join(rlog_BD_10) %>%
@@ -632,7 +654,7 @@ GO_0008284_sig = iso2go %>%
 GO_0008284_sig
 ```
 - We have 6 genes, plot them in a heatmap but this time use the calculated difference from the mean
-```{r}
+```{r,eval=FALSE}
 GO_0008284_means_sig = apply(GO_0008284_sig, 1, mean)
 explc_cellprolif = GO_0008284_sig-GO_0008284_means_sig
 head(explc_cellprolif)
@@ -647,7 +669,7 @@ heatmap_GO_0008284_sig = heatmap.2(as.matrix(explc_cellprolif), col = col0, Rowv
 - In this heatmap, I've used a new color palette. Now blue is downregulated and orange is upregulated
 
 - Now, search within rlog_BD_10 for all the sig DE genes that correspond to the oxidoreductase terms
-```{r}
+```{r,eval=FALSE}
 oxidoreductase_sig = iso2go %>%
   filter(str_detect(GO.terms, "GO:1990204|GO:0016491|GO:0016715")) %>%
   left_join(rlog_BD_10) %>%
@@ -660,7 +682,7 @@ oxidoreductase_sig = iso2go %>%
 oxidoreductase_sig
 ```
 - We have 4 genes here, plot the difference from the mean on a heatmap
-```{r}
+```{r,eval=FALSE}
 oxidoreductase_means_sig = apply(oxidoreductase_sig, 1, mean)
 explc_oxr = oxidoreductase_sig-oxidoreductase_means_sig
 head(explc_oxr)
@@ -674,7 +696,7 @@ heatmap_oxidoreductase_sig = heatmap.2(as.matrix(explc_oxr), col = col0, Rowv = 
 
 - For the final step, I'm going to make a heatmap of all the genes that are differentially regulated (alpha = 0.05 to account for the count differences) that will allow for further exploration
 
-```{r}
+```{r,eval=FALSE}
 BD_DE_05 = filter(BD_DE, pval.BD <= 0.05, preserve = TRUE)
 head(BD_DE_05) 
 rlog_BD_05 = BD_DE_05[,1:7] %>%
@@ -683,7 +705,7 @@ head(rlog_BD_05)
 ```
 
 
-```{r}
+```{r,eval=FALSE}
 sigDEG_BD = iso2go %>%
   left_join(rlog_BD_05) %>%
   left_join(gene) %>%
@@ -697,8 +719,7 @@ nrow(sigDEG_BD)
 ```
 - sigDEG_BD are all my significant DEGs between B and D in the right format with alpha of 0.05
 - First making a heatmap of the raw values
-```{r}
-library(gplots)
+```{r,eval=FALSE}
 heatmap_sigDEG = heatmap.2(as.matrix(sigDEG_BD), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
                            dendrogram = "both",
                            trace = "none",
@@ -707,7 +728,7 @@ heatmap_sigDEG = heatmap.2(as.matrix(sigDEG_BD), col = col0, Rowv = TRUE, Colv =
 ```
 
 - Now calculating the difference from the mean and making that a heatmap
-```{r}
+```{r,eval=FALSE}
 sigDEG_BD_means = apply(sigDEG_BD, 1, mean)
 explc_sig = sigDEG_BD-sigDEG_BD_means
 heatmap_sigDEG_means = heatmap.2(as.matrix(explc_sig), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
@@ -719,7 +740,7 @@ heatmap_sigDEG_means = heatmap.2(as.matrix(explc_sig), col = col0, Rowv = TRUE, 
 
 - Make this list of genes and expression values into a csv file for future reference
 - Also attach the jpg image of the heatmap so that all the gene symbols are visible
-```{r}
+```{r, eval=FALSE}
 write.csv(explc_sig, "0.5DEG_BD_genesymbols.csv", quote = F)
 knitr::opts_chunk$set(echo = TRUE)
 knitr::include_graphics("Ofav 0.5 Sig DEG Mean Heatmap.jpg")
@@ -732,9 +753,3 @@ knitr::include_graphics("Ofav 0.5 Sig DEG Mean Heatmap.jpg")
 - SODC (superoxide dismutase) is strongly upregulated in coral hosting D compared to B; SODC is an NF-kB response gene; this is consistent with our expectations that coral hosting D would perform better under thermal/oxidative stress because increased SOD means an increased ability to deal with oxidative stress
 - To a lesser extent, HSP110 may be downregulated in D compared to B, but this may be an effect of count value
 - TNFSF10 and TRAF4.2 were identified as upregulated in one B (B.1) compared to D (i.e., downregulated in D), but again, this may be an effect of count size
-
-
-
-
-
-
