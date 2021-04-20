@@ -58,7 +58,7 @@ packageVersion("ggrepel")
 ## Raw Data Filtering
 
 ```{r}
-setwd("~/BI 586/FinalProject/")
+setwd("/Users/mariaingersoll/Desktop/BU2020-2021/Ecol_and_Enviro_Genomics/BI586-git/Ofav_uptake_finalproj")
 ```
 
 Counts data was stored in a text file that was read in as a data frame to a variable called `countData`. Note that this data was pre-filtered for a base mean of 3. The column names are renamed based on the the strain type and replicate number for readability sake. The length of the data frame is reported and it represents the number of isoforms.
@@ -119,7 +119,7 @@ dds<-DESeq(dds)
 vsd.ge=assay(vst(dds))
 rl=vst(dds)
 e=ExpressionSet(assay(rl), AnnotatedDataFrame(as.data.frame(colData(rl))))
-v = setwd("~/BI 586/FinalProject/outliers")
+v = setwd("/Users/mariaingersoll/Desktop/BU2020-2021/Ecol_and_Enviro_Genomics/BI586-git/Ofav_uptake_finalproj")
 arrayQualityMetrics(e,outdir=v,intgroup=c("treat"),force=T)
 ```
 
@@ -243,7 +243,7 @@ head(rldpvals)
 rld=rldpvals[,1:6]
 head(rld)
 ```
-- dist computes and returns the distance matrix computed using the specified distance measure to compute distances between the rows of a data matrix (rld); determine the overall differences in expression between each sample
+- dist computes and returns the distance matrix computed using the specified distance measure to compute distances between the rows of a data matrix (rld); determine the overall differences in expression between each sample based on the rlog values
 - Turn the distances into a matrix
 ```{r,eval=FALSE}
 sampleDists <- dist(t(rld))
@@ -323,9 +323,7 @@ ggplot(pca_s, aes(PC1, PC2, color = treat, pch = treat)) +
 
 - You can see from this plot that the B samples have very high variance and that there's no overlap between the samples
 
-- I'm skipping the adonis part because it gave me an error and doesn't seem that important
-
-
+- Perform adonis to determine whether the conditions are significantly different
 ```{r,eval=FALSE}
 adonis(pca$x ~ treat, data = pca_s, method='eu', na.rm = TRUE)
 ```
@@ -350,6 +348,13 @@ table(resD$padj<0.01)
 #FALSE  TRUE 
 # 3294     4 
 summary(resD)
+  #out of 16148 with nonzero total read count
+  #adjusted p-value < 0.1
+  #LFC > 0 (up)       : 2, 0.012%
+  #LFC < 0 (down)     : 27, 0.17%
+  #outliers [1]       : 19, 0.12%
+  #low counts [2]     : 12831, 79%
+  #(mean count < 10)
 
 nrow(resD[resD$padj<0.05 & !is.na(resD$padj),])  # Num significantly differentially expressed genes excluding the no/low count genes   #20
 
@@ -369,8 +374,11 @@ nrow(resD[resD$padj<0.1 & resD$log2FoldChange < 0 & !is.na(resD$padj),])
 write.table(resD, file="D_2021.txt", quote=F, sep="\t")
 cd <- read.table("D_2021.txt")
 head(cd)
-head(cd)
+```
 
+- Create a term go_input_D that has the -logpval as a neg number if the l2fc is < 0 and a pos number if the l2fc is > 0
+- This term will go into the go analysis
+```{r,eval=FALSE}
 cd
 go_input_D = cd %>%
   tibble::rownames_to_column(var = "iso") %>%
@@ -394,8 +402,8 @@ ACTUAL DIFFERENTIAL GENE EXPRESSION ANALYSIS STARTS HERE
 - CC: Cellular component
 
 - Manipulated BD_DE.txt in excel following Sarah's verbal instructions and loaded it here
-- BD_DE_GO has the -log(p-values)
-- From the timmy_uptake file, we got log2 fold change (MLE): treat D vs B
+- BD_DE_GO has the mutated -log(p-values) \
+- From the BI586_uptake file, we got log2 fold change (MLE): treat D vs B
 - Reminder: this means that pos log2FC values indicate D is upregulated compared to B; The name provided in the second element (B) is the baseline
 
 ```{r,eval=FALSE}
@@ -432,7 +440,7 @@ gomwuStats(input, goDatabase, goAnnotations, goDivision,
 ```
 NEW TRANSCRIPTOME: 18  GO terms at 10% FDR
 
-- Returned 9 GO terms at 10% FDR
+- Old transcriptome: Returned 9 GO terms at 10% FDR
 - Plot results in a dendrogram
 - absValue=-log(0.05,10); genes with the measure value exceeding this will be counted as "good genes". Specify absValue=0.001 if you are doing Fisher's exact test for standard GO enrichment or analyzing a WGCNA module (all non-zero genes = "good genes").
 - level1=0.1: FDR threshold for plotting. Specify level1=1 to plot all GO categories containing genes exceeding the absValue.
@@ -489,7 +497,7 @@ resultsBP=gomwuPlot(input,goAnnotations,goDivision,
 resultsBP
 ```
 
-- Returned 6 GO terms at 10% FDR
+- Old transcriptome: Returned 6 GO terms at 10% FDR
 - Here we are interested in the positive regulation of cell proliferation
 
 - Now let's run it for CC
@@ -523,8 +531,8 @@ resultsCC=gomwuPlot(input,goAnnotations,goDivision,
 resultsCC
 ```
 
-- Returned 18 GO terms of interest
-- Interested in the oxidoreductase complex
+- Old transcriptome: Returned 18 GO terms of interest
+- Interested in the mitochondrial complexes
 
 
 
@@ -553,7 +561,7 @@ gene = iso2gene %>%
        
 head(gene)
 ```
-- To get the rlog foldchange values, I'm going to manipulate the timmy uptake file (which I will save in a variable called BD_DE)
+- To get the rlog foldchange values, I'm going to manipulate the BI586 uptake file (which I will save in a variable called BD_DE)
 ```{r,eval=FALSE}
 head(read.csv("BI586_uptake_RLDandPVALS.csv"))
 BD_DE = read.csv("BI586_uptake_RLDandPVALS.csv")
@@ -563,10 +571,10 @@ rlog_BD = BD_DE[,1:7] %>%
   rename(gene_ID = X)
 head(rlog_BD)
 ```
-- rlog_BD just has the isoform names (called Gene_id) and the log2FC for each sample
+- rlog_BD just has the isoform names (called gene_ID) and the log2FC for each sample
 - could have also used the tidyverse select function instead of [,1:7] here, Dan says it's better to keep the same format so using select would have been better
 
-- Next, make a variable that contains all the genes that correspond to GO:0008284
+- Next, make a variable that contains all the genes that correspond to the GO term for pos reg of cell prolif GO:0008284 
 ```{r, warning=FALSE, eval=FALSE}
 GO_0008284 = iso2go %>%
   filter(str_detect(GO.terms, "GO:0008284")) %>%
@@ -596,20 +604,22 @@ heatmap_GO_0008284 = heatmap.2(as.matrix(GO_0008284), Rowv = TRUE, Colv = FALSE,
 - Yellow to white correspond to upregulation and red corresponds to downregulation
 
 - Now doing the same for oxidoreductase
-- Oxidoreductase complex from CC (GO:1990204); oxidoreductase activity (GO:0016491); oxidoreductase activity, acting on paired donors etc. (GO:0016715)
+- Oxidoreductase complex from CC (GO:1990204); oxidoreductase activity from MF (GO:0016491)
 - To filter for multiple terms, use | (the symbol that is shift back slash) and quotes only outside all the terms
 ```{r,eval=FALSE}
 oxidoreductase = iso2go %>%
-  filter(str_detect(GO.terms, "GO:1990204|GO:0016491|GO:0016715")) %>%
+  filter(str_detect(GO.terms, "GO:1990204|GO:0016491")) %>%
   left_join(rlog_BD) %>%
   left_join(gene) %>%
   mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %>%
   column_to_rownames(var = "gene_symbol") %>%
-  dplyr::select(-GO.terms, -Description, -Gene_id) %>%
+  dplyr::select(-GO.terms, -description, -gene_ID) %>%
   drop_na() %>%
   dplyr::select(sort(current_vars()))
 head(oxidoreductase)
+nrow(oxidoreductase)
 ```
+- 92 genes that correspond to these two GO terms
 Plot a heatmap of the differential expression of ALL the genes that correspond to the oxidoreductase GO terms above
 ```{r,eval=FALSE}
 heatmap_oxidoreductase = heatmap.2(as.matrix(oxidoreductase), Rowv = TRUE, Colv = TRUE, scale = "row",
@@ -625,13 +635,14 @@ heatmap_oxidoreductase = heatmap.2(as.matrix(oxidoreductase), Rowv = TRUE, Colv 
 
 - Now we want to make new heatmaps of just those genes in cell prolif and oxidoreductase that are significantly differentially expressed (we will use an alpha of 0.1)
 
-- Filter the timmy uptake data for all genes significantly differentially expressed (alpha = 0.1 for this section, we will use the more stringent 0.05 later)
+- Filter the BI586 uptake data for all genes significantly differentially expressed (alpha = 0.1 for this section, we will use the more stringent 0.05 later)
 ```{r,eval=FALSE}
 BD_DE_10 = filter(BD_DE, pval.BD <= 0.1, preserve = TRUE)
 head(BD_DE_10) 
 rlog_BD_10 = BD_DE_10[,1:7] %>%
-  rename(Gene_id = X)
+  rename(gene_ID = X)
 head(rlog_BD_10)
+nrow(rlog_BD_10)
 ```
 - rlog_BD_10 has all the genes that are sig DE with alpha=0.1 and does not contain the p-val nor the adj p-val
 
@@ -666,12 +677,12 @@ heatmap_GO_0008284_sig = heatmap.2(as.matrix(explc_cellprolif), col = col0, Rowv
 - Now, search within rlog_BD_10 for all the sig DE genes that correspond to the oxidoreductase terms
 ```{r,eval=FALSE}
 oxidoreductase_sig = iso2go %>%
-  filter(str_detect(GO.terms, "GO:1990204|GO:0016491|GO:0016715")) %>%
+  filter(str_detect(GO.terms, "GO:1990204|GO:0016491")) %>%
   left_join(rlog_BD_10) %>%
   left_join(gene) %>%
   mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %>%
   column_to_rownames(var = "gene_symbol") %>%
-  dplyr::select(-GO.terms, -Description, -Gene_id) %>%
+  dplyr::select(-GO.terms, -description, -gene_ID) %>%
   drop_na() %>%
   dplyr::select(sort(current_vars()))
 oxidoreductase_sig
@@ -689,7 +700,7 @@ heatmap_oxidoreductase_sig = heatmap.2(as.matrix(explc_oxr), col = col0, Rowv = 
                                    margin = c(5,15))
 ```
 
-- For the final step, I'm going to make a heatmap of all the genes that are differentially regulated (alpha = 0.05 to account for the count differences) that will allow for further exploration
+- For the final step, I'm going to make a heatmap of all the genes that are differentially regulated (alpha = 0.05 and alpha = 0.01 to account for the count differences) that will allow for further exploration
 
 ```{r,eval=FALSE}
 BD_DE_05 = filter(BD_DE, pval.BD <= 0.05, preserve = TRUE)
@@ -697,48 +708,99 @@ head(BD_DE_05)
 rlog_BD_05 = BD_DE_05[,1:7] %>%
   rename(gene_ID = X)
 head(rlog_BD_05)
-```
+nrow(rlog_BD_05)
 
+BD_DE_01 = filter(BD_DE, pval.BD <= 0.01, preserve = TRUE)
+head(BD_DE_01) 
+rlog_BD_01 = BD_DE_01[,1:7] %>%
+  rename(gene_ID = X)
+head(rlog_BD_01)
+nrow(rlog_BD_01)
+```
+- alpha of 0.05 yields 400 terms which is unmanageable
+- alpha of 0.01 yields 120 terms which is better
+- Let's also try padj alpha of 0.1:
+```{r}
+BD_DE_adj = filter(BD_DE, padj.BD <= 0.1, preserve = TRUE)
+head(BD_DE_adj) 
+rlog_BD_adj = BD_DE_adj[,1:7] %>%
+  rename(gene_ID = X)
+head(rlog_BD_adj)
+nrow(rlog_BD_adj)
+```
+- padj yields 29 terms which is pretty manageable
 
 ```{r,eval=FALSE}
-sigDEG_BD = iso2go %>%
-  left_join(rlog_BD_05) %>%
+sigDEG_BD_adj = iso2go %>%
+  left_join(rlog_BD_adj) %>%
   left_join(gene) %>%
   mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %>%
   column_to_rownames(var = "gene_symbol") %>%
   dplyr::select(-GO.terms, -description, -gene_ID) %>%
   drop_na() %>%
   dplyr::select(sort(current_vars()))
-head(sigDEG_BD)
-nrow(sigDEG_BD)
+head(sigDEG_BD_adj)
+nrow(sigDEG_BD_adj)
+
+sigDEG_BD_01 = iso2go %>%
+  left_join(rlog_BD_01) %>%
+  left_join(gene) %>%
+  mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %>%
+  column_to_rownames(var = "gene_symbol") %>%
+  dplyr::select(-GO.terms, -description, -gene_ID) %>%
+  drop_na() %>%
+  dplyr::select(sort(current_vars()))
+head(sigDEG_BD_01)
+nrow(sigDEG_BD_01)
 ```
-- sigDEG_BD are all my significant DEGs between B and D in the right format with alpha of 0.05
-- First making a heatmap of the raw values
+- sigDEG_BD_adj are all my significant DEGs between B and D in the right format with padj of 0.1
+- Only 17 out of the 29 DEGs had annotated GO terms
+- sigDEG_BD_01 are all my significant DEGs between B and D in the right format with pval of 0.01
+- Only 74 out of the 120 DEGs had annotated GO terms
+- First making a heatmap of the raw values for the adj
 ```{r,eval=FALSE}
-heatmap_sigDEG = heatmap.2(as.matrix(sigDEG_BD), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
+heatmap_sigDEG_adj = heatmap.2(as.matrix(sigDEG_BD_adj), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
                            dendrogram = "both",
                            trace = "none",
-                           main = "Significant DEG",
+                           main = "Significant DEG, padj < 0.1",
+                           margin = c(5,15))
+```
+- A lot of the terms are un-annotated
+- Now calculating the difference from the mean of the padj DEGs and making that a heatmap
+```{r,eval=FALSE}
+sigDEG_BD_means_adj = apply(sigDEG_BD_adj, 1, mean)
+explc_sig_adj = sigDEG_BD_adj-sigDEG_BD_means_adj
+heatmap_sigDEG_means_adj = heatmap.2(as.matrix(explc_sig_adj), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
+                           dendrogram = "both",
+                           trace = "none",
+                           main = "Significant DEG Mean, padj < 0.1",
+                           margin = c(5,15))
+```
+- Do the same with the pval of 0.01
+```{r}
+heatmap_sigDEG_01 = heatmap.2(as.matrix(sigDEG_BD_01), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
+                           dendrogram = "both",
+                           trace = "none",
+                           main = "Significant DEG, pval < 0.01",
+                           margin = c(5,15))
+
+sigDEG_BD_means_01 = apply(sigDEG_BD_01, 1, mean)
+explc_sig_01 = sigDEG_BD_01-sigDEG_BD_means_01
+heatmap_sigDEG_means_01 = heatmap.2(as.matrix(explc_sig_01), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
+                           dendrogram = "both",
+                           trace = "none",
+                           main = "Significant DEG Mean, pval < 0.01",
                            margin = c(5,15))
 ```
 
-- Now calculating the difference from the mean and making that a heatmap
-```{r,eval=FALSE}
-sigDEG_BD_means = apply(sigDEG_BD, 1, mean)
-explc_sig = sigDEG_BD-sigDEG_BD_means
-heatmap_sigDEG_means = heatmap.2(as.matrix(explc_sig), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
-                           dendrogram = "both",
-                           trace = "none",
-                           main = "Significant DEG Mean",
-                           margin = c(5,15))
-```
 
 - Make this list of genes and expression values into a csv file for future reference
 - Also attach the jpg image of the heatmap so that all the gene symbols are visible
 ```{r, eval=FALSE}
-write.csv(explc_sig, "0.5DEG_BD_genesymbols.csv", quote = F)
+write.csv(explc_sig_adj, "0.1adjDEG_BD_genesymbols.csv", quote = F)
+write.csv(explc_sig_01, "0.01pvalDEG_BD_genesymbols.csv", quote = F)
 knitr::opts_chunk$set(echo = TRUE)
-knitr::include_graphics("Ofav 0.5 Sig DEG Mean Heatmap.jpg")
+knitr::include_graphics("Ofav Adj 0.1 Sig DEG Mean Heatmap.jpg")
 ```
 
 
