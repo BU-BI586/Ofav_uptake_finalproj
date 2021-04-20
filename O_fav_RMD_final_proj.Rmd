@@ -93,6 +93,12 @@ totalCounts=colSums(newCounts)
 barplot(totalCounts, col=c("green", "green", "green", "blue" , "blue" , "blue"), ylab="Raw Counts", xlab="Coral Hosting Symbiodiniaceae Strains")
 ```
 
+Below the minimum and maximum summed counts, after removal of small library sizes, are reported. 
+```{r}
+min(totalCounts)
+max(totalCounts)
+```
+
 *Note: In the above barplot, we see that despite the previous filtering, there are still conditions that have large library sizes (BR.C, DR.A, and DR.C) compared to other conditions that have very low library sizes (BR.A, BR.B, annd DR.B). This inconsistency in library size must be kept in mind for conclusions drawn from later analysis of the differential expression of genes between coral hosting strain B and coral hosting strain D.*
 
 ## Outlier Analysis
