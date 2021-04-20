@@ -95,6 +95,12 @@ min(totalCounts)
 max(totalCounts)
 ```
 
+Below the minimum and maximum summed counts, after removal of small library sizes, are reported. 
+```{r}
+min(totalCounts)
+max(totalCounts)
+```
+
 *Note: In the above barplot, we see that despite the previous filtering, there are still conditions that have large library sizes (BR.C, DR.A, and DR.C) compared to other conditions that have very low library sizes (BR.A, BR.B, annd DR.B). This inconsistency in library size must be kept in mind for conclusions drawn from later analysis of the differential expression of genes between coral hosting strain B and coral hosting strain D.*
 
 - Rareify counts, cut down the high counts to 100,000
@@ -595,10 +601,10 @@ head(gene)
 ```{r,eval=FALSE}
 head(read.csv("BI586_uptake_RLDandPVALS.csv"))
 BD_DE = read.csv("BI586_uptake_RLDandPVALS.csv")
-
+library(dplyr)
 head(BD_DE)
 rlog_BD = BD_DE[,1:7] %>%
-  rename(gene_ID = X)
+  dplyr::rename(gene_ID = X)
 head(rlog_BD)
 ```
 - rlog_BD just has the isoform names (called gene_ID) and the log2FC for each sample
@@ -670,7 +676,7 @@ heatmap_oxidoreductase = heatmap.2(as.matrix(oxidoreductase), Rowv = TRUE, Colv 
 BD_DE_10 = filter(BD_DE, pval.BD <= 0.1, preserve = TRUE)
 head(BD_DE_10) 
 rlog_BD_10 = BD_DE_10[,1:7] %>%
-  rename(gene_ID = X)
+  dplyr::rename(gene_ID = X)
 head(rlog_BD_10)
 nrow(rlog_BD_10)
 ```
@@ -737,14 +743,14 @@ heatmap_oxidoreductase_sig = heatmap.2(as.matrix(explc_oxr), col = col0, Rowv = 
 BD_DE_05 = filter(BD_DE, pval.BD <= 0.05, preserve = TRUE)
 head(BD_DE_05) 
 rlog_BD_05 = BD_DE_05[,1:7] %>%
-  rename(gene_ID = X)
+  dplyr::rename(gene_ID = X)
 head(rlog_BD_05)
 nrow(rlog_BD_05)
 
 BD_DE_01 = filter(BD_DE, pval.BD <= 0.01, preserve = TRUE)
 head(BD_DE_01) 
 rlog_BD_01 = BD_DE_01[,1:7] %>%
-  rename(gene_ID = X)
+  dplyr::rename(gene_ID = X)
 head(rlog_BD_01)
 nrow(rlog_BD_01)
 ```
@@ -755,7 +761,7 @@ nrow(rlog_BD_01)
 BD_DE_adj = filter(BD_DE, padj.BD <= 0.1, preserve = TRUE)
 head(BD_DE_adj) 
 rlog_BD_adj = BD_DE_adj[,1:7] %>%
-  rename(gene_ID = X)
+  dplyr::rename(gene_ID = X)
 head(rlog_BD_adj)
 nrow(rlog_BD_adj)
 ```
