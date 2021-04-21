@@ -97,31 +97,15 @@ max(totalCounts)
 
 *Note: In the above barplot, we see that despite the previous filtering, there are still conditions that have large library sizes (BR.C, DR.A, and DR.C) compared to other conditions that have very low library sizes (BR.A, BR.B, annd DR.B). This inconsistency in library size must be kept in mind for conclusions drawn from later analysis of the differential expression of genes between coral hosting strain B and coral hosting strain D.*
 
-- Rareify counts, cut down the high counts to 100,000
-- First look at all the counts data
+- Rarefy counts, cut down the high counts to 100,000
+- Call your new rarefied count data "rare" and the new rarefied count data "unt_newCounts"
 ```{r}
-# rarecurve(newCounts,step=100,label=FALSE)
 t_newCounts = t(newCounts)
-rarefy(t_newCounts, 100000, se=FALSE, MARGIN=1)
-head(t_newCounts)
-unt_newCounts = t(t_newCounts)
+rare = rrarefy(t_newCounts, 100000)
+unt_newCounts = t(rare)
+head(unt_newCounts)
 rare_totalCounts=colSums(unt_newCounts)
 head(rare_totalCounts)
-
-rrarefy(t_newCounts, 100000)
-unt_newCounts = t(t_newCounts)
-rare_totalCounts=colSums(unt_newCounts)
-head(rare_totalCounts)
-
-rarecurve(t_newCounts,step=100000)
-total <- rowSums(t_newCounts)
-subset = subset(total, total >50000)
-if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-BiocManager::install(version = "3.12")
-BiocManager::install("metaseqR2")
-library(metaseqR2)
-downsample.counts(subset, seed=42)
 ```
 
 
