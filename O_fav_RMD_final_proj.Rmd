@@ -75,7 +75,7 @@ length(countData[,1])
 ```
 
 The total sum of isoform counts for each condition are displayed below in a barplot. The minimum and maximum are as reported below. 
-```{r, echo=FALSE, fig.cap="**Figure 0.** All raw sequencing count values from each Orbicella faveolata sample demonstrating various degrees of library sizes. Green bars are O. faveolata hosting Symbiodiniaceae strain B01 (replicates: BR.A, BR.B, BR.C, BR.D). Red bars are O. faveolata hosting Symbiodiniaceae strain C (triplicates: CR.A,CR.B, CR.c). Blue bars are O. faveolata hosting Symbiodiniaceae strain D (replicates: DR.A, DR.B, DR.C, DR.D).", fig.width=10}
+```{r, echo=FALSE, fig.cap="**Figure 1.** All raw sequencing count values from each Orbicella faveolata sample demonstrating various degrees of library sizes. Green bars are O. faveolata hosting Symbiodiniaceae strain B01 (replicates: BR.A, BR.B, BR.C, BR.D). Red bars are O. faveolata hosting Symbiodiniaceae strain C (triplicates: CR.A,CR.B, CR.c). Blue bars are O. faveolata hosting Symbiodiniaceae strain D (replicates: DR.A, DR.B, DR.C, DR.D).", fig.width=10}
 totalCounts=colSums(countData)
 barplot(totalCounts, col=c("green",  "green", "green", "green", "red", "red", "red", "blue", "blue" , "blue" , "blue"), ylab="Raw Counts", xlab="Coral Hosting Symbiodiniaceae Strains")
 ```
@@ -93,7 +93,7 @@ newCounts = countData %>%
 ```
 
 
-```{r, echo=FALSE, fig.cap="**Figure 1.** Selected raw sequencing count values from each Orbicella faveolata sample demonstrating various degrees of library sizes. Green bars are O. faveolata hosting Symbiodiniaceae strain B01 (triplicates: BR.A, BR.B, BR.C). Blue bars are O. faveolata hosting Symbiodiniaceae strain D (triplicates: DR.A, DR.C, DR.D). One replicate from the strain B condition, one replicate from the strain D condition, and all replicates from O. faveolata hosting Symbiodiniaceae strain C were removed prior to this analysis due to small library sizes."}
+```{r, echo=FALSE, fig.cap="**Figure 2.** Selected raw sequencing count values from each Orbicella faveolata sample demonstrating various degrees of library sizes. Green bars are O. faveolata hosting Symbiodiniaceae strain B01 (triplicates: BR.A, BR.B, BR.C). Blue bars are O. faveolata hosting Symbiodiniaceae strain D (triplicates: DR.A, DR.C, DR.D). One replicate from the strain B condition, one replicate from the strain D condition, and all replicates from O. faveolata hosting Symbiodiniaceae strain C were removed prior to this analysis due to small library sizes."}
 totalCounts=colSums(newCounts)
 barplot(totalCounts, col=c("green", "green", "green", "blue" , "blue" , "blue"), ylab="Raw Counts", xlab="Coral Hosting Symbiodiniaceae Strains")
 min(totalCounts)
@@ -137,32 +137,32 @@ downsample.counts(subset, seed=42)
 
 ## Outlier Analysis
 
-For outlier analysis, we first create a character vector holding the names of the strains in each sample. The vector is converted to a dataframe and is renamed colData for further use. 
+For outlier analysis, we first create a character vector holding the names of the strains in each sample. The vector is converted to a dataframe and is renamed `colData` for further use. 
 ```{r, eval=FALSE}
 treat=c( "B", "B", "B", "D", "D", "D")
 g=data.frame(treat)
-g
 colData<- g
 colData
 ```
 
-- run DESeqDataSetFromMatrix and name it dds with countData for matrix input, colData for columns, and "treat" to dictate how the counts for each gene depend on the variables in colData
-- then run DESeq on dds
+`DESeqDataSetFromMatrix` was run on the `newCounts` which represents the raw counts of the selected samples. The column data is set to the strain type and the design to the treatment vector so that it may dictate how the counts for each gene depend on the variables in colData. The `DESeq` step was run on the results of the prior step.  
 ```{r results="hide", message=FALSE, eval=FALSE}
 dds<-DESeqDataSetFromMatrix(countData=newCounts, colData=colData, design=~treat)
 dds<-DESeq(dds)
 ```
 
+The `vst` function is the variance-stabilizing transformation which models the mean-variance relationship of replicates. The assay of dds generates a table with the mean-variance of each of the isoform treatments. The as.data.frame(colData(rl))) generates a table with the columns and a sizeFactor value that is converted into the formal class AnnotatedDataFrame. Both values are passed are used to create an ExpressionSet object which is used to generate the array’s quality metrics using the treat variable as the intgroup.
 ```{r, eval=FALSE}
 vsd.ge=assay(vst(dds))
 rl=vst(dds)
 e=ExpressionSet(assay(rl), AnnotatedDataFrame(as.data.frame(colData(rl))))
-v = setwd("/Users/mariaingersoll/Desktop/BU2020-2021/Ecol_and_Enviro_Genomics/BI586-git/Ofav_uptake_finalproj")
+v = setwd("~/BI 586/FinalProject")
 arrayQualityMetrics(e,outdir=v,intgroup=c("treat"),force=T)
 ```
+The array’s quality metrics showed that there was only one outlier (for the second replicate of the O.fav with Symbiodiniaceae strain B) by only one detection method (the MA plot). The the other two detection methods: by distances between arrays and by boxplots showed no outliers in any of the samples.
 
 
-
+`results` extracts the results table from the DESeq analysis and the DESeqDataSet is used to generate the dispersion plot.
 ```{r, eval=FALSE}
 head(dds)
 res<- results(dds)
@@ -171,10 +171,8 @@ res<- results(dds)
 - this means that pos log2FC values indicate D is upregulated compared to B
 - The name provided in the second element (B) is the baseline
 
--Next look at the dispersions plot, which basically just tells you the spread of your data
-
-
-```{r, echo=FALSE, fig.cap="Figure 2. Dispersion plot uptake", eval=FALSE}
+Spread of data is shown with the dispersion plot below. 
+```{r, echo=FALSE, fig.cap="Figure 3. Scatter plot of dispersion estimates per gene (on the y-axis) versus the mean of normalized counts (on the x-axis) of isoforms identified in the treatment samples of Orbicella faveolata. Gene-wise dispersion estimates are in black, fitted estimates are in red, and final estimates are in blue as indicated by the legend.", eval=FALSE}
 plotDispEsts(dds, main="Dispersion plot Uptake")
 ```
 
@@ -186,6 +184,7 @@ rld <- rlogTransformation(dds, blind=TRUE)
 head(assay(rld))
 
 ```
+
 ```{r, echo=FALSE, fig.cap="Figure 3. Histogram of r-log transformations", eval=FALSE}
 hist(assay(rld))
 ```
