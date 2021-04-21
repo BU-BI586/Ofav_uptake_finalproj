@@ -96,8 +96,6 @@ newCounts = countData %>%
 ```{r, echo=FALSE, fig.cap="**Figure 2.** Selected raw sequencing count values from each Orbicella faveolata sample demonstrating various degrees of library sizes. Green bars are O. faveolata hosting Symbiodiniaceae strain B01 (triplicates: BR.A, BR.B, BR.C). Blue bars are O. faveolata hosting Symbiodiniaceae strain D (triplicates: DR.A, DR.C, DR.D). One replicate from the strain B condition, one replicate from the strain D condition, and all replicates from O. faveolata hosting Symbiodiniaceae strain C were removed prior to this analysis due to small library sizes."}
 totalCounts=colSums(newCounts)
 barplot(totalCounts, col=c("green", "green", "green", "blue" , "blue" , "blue"), ylab="Raw Counts", xlab="Coral Hosting Symbiodiniaceae Strains")
-min(totalCounts)
-max(totalCounts)
 ```
 
 Below the minimum and maximum summed counts, after removal of small library sizes, are reported. 
