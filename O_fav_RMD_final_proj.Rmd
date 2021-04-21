@@ -57,9 +57,14 @@ packageVersion("ggrepel")
 
 ## Raw Data Filtering
 
-```{r}
+```{r,echo=FALSE, eval=FALSE}
 setwd("/Users/mariaingersoll/Desktop/BU2020-2021/Ecol_and_Enviro_Genomics/BI586-git/Ofav_uptake_finalproj")
 ```
+
+```{r, echo=FALSE}
+setwd("~/BI 586/FinalProject")
+```
+
 
 Counts data was stored in a text file that was read in as a data frame to a variable called `countData`. Note that this data was pre-filtered for a base mean of 3. The column names are renamed based on the the strain type and replicate number for readability sake. The length of the data frame is reported and it represents the number of isoforms.
 ```{r}
@@ -105,7 +110,7 @@ max(totalCounts)
 
 - Rareify counts, cut down the high counts to 100,000
 - First look at all the counts data
-```{r}
+```{r, eval=FALSE}
 # rarecurve(newCounts,step=100,label=FALSE)
 t_newCounts = t(newCounts)
 rarefy(t_newCounts, 100000, se=FALSE, MARGIN=1)
@@ -130,12 +135,9 @@ library(metaseqR2)
 downsample.counts(subset, seed=42)
 ```
 
-
 ## Outlier Analysis
 
-- Now create the vector "treat" of each strain
-- Then turn the vector "treat" into a dataframe called "g"
-- Rename the dataframe "colData"
+For outlier analysis, we first create a character vector holding the names of the strains in each sample. The vector is converted to a dataframe and is renamed colData for further use. 
 ```{r, eval=FALSE}
 treat=c( "B", "B", "B", "D", "D", "D")
 g=data.frame(treat)
@@ -757,7 +759,7 @@ nrow(rlog_BD_01)
 - alpha of 0.05 yields 400 terms which is unmanageable
 - alpha of 0.01 yields 120 terms which is better
 - Let's also try padj alpha of 0.1:
-```{r}
+```{r,eval=FALSE}
 BD_DE_adj = filter(BD_DE, padj.BD <= 0.1, preserve = TRUE)
 head(BD_DE_adj) 
 rlog_BD_adj = BD_DE_adj[,1:7] %>%
@@ -814,7 +816,7 @@ heatmap_sigDEG_means_adj = heatmap.2(as.matrix(explc_sig_adj), col = col0, Rowv 
                            margin = c(5,15))
 ```
 - Do the same with the pval of 0.01
-```{r}
+```{r, eval=FALSE}
 heatmap_sigDEG_01 = heatmap.2(as.matrix(sigDEG_BD_01), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
                            dendrogram = "both",
                            trace = "none",

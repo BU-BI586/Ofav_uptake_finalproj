@@ -201,7 +201,6 @@ library(&quot;genefilter&quot;)               #Version 1.70.0</code></pre>
 </div>
 <div id="raw-data-filtering" class="section level2">
 <h2>Raw Data Filtering</h2>
-<pre class="r"><code>setwd(&quot;~/BI 586/FinalProject/&quot;)</code></pre>
 <p>Counts data was stored in a text file that was read in as a data frame to a variable called <code>countData</code>. Note that this data was pre-filtered for a base mean of 3. The column names are renamed based on the the strain type and replicate number for readability sake. The length of the data frame is reported and it represents the number of isoforms.</p>
 <pre class="r"><code>countData &lt;- read.table(&quot;orbfav_uptake_counts.txt&quot;)
 newColNames = c(&quot;BR.A&quot;, &quot;BR.B&quot;, &quot;BR.C&quot;, &quot;BR.D&quot;, &quot;CR.A&quot;, &quot;CR.B&quot;, &quot;CR.C&quot;,&quot;DR.A&quot;,&quot;DR.B&quot;, &quot;DR.C&quot;, &quot;DR.D&quot;)
@@ -228,7 +227,40 @@ The total sum of isoform counts for each condition are displayed below in a barp
 <strong>Figure 1.</strong> Selected raw sequencing count values from each Orbicella faveolata sample demonstrating various degrees of library sizes. Green bars are O. faveolata hosting Symbiodiniaceae strain B01 (triplicates: BR.A, BR.B, BR.C). Blue bars are O. faveolata hosting Symbiodiniaceae strain D (triplicates: DR.A, DR.C, DR.D). One replicate from the strain B condition, one replicate from the strain D condition, and all replicates from O. faveolata hosting Symbiodiniaceae strain C were removed prior to this analysis due to small library sizes.
 </p>
 </div>
+<pre><code>## [1] 42716</code></pre>
+<pre><code>## [1] 1198769</code></pre>
+<p>Below the minimum and maximum summed counts, after removal of small library sizes, are reported.</p>
+<pre class="r"><code>min(totalCounts)</code></pre>
+<pre><code>## [1] 42716</code></pre>
+<pre class="r"><code>max(totalCounts)</code></pre>
+<pre><code>## [1] 1198769</code></pre>
 <p><em>Note: In the above barplot, we see that despite the previous filtering, there are still conditions that have large library sizes (BR.C, DR.A, and DR.C) compared to other conditions that have very low library sizes (BR.A, BR.B, annd DR.B). This inconsistency in library size must be kept in mind for conclusions drawn from later analysis of the differential expression of genes between coral hosting strain B and coral hosting strain D.</em></p>
+<ul>
+<li>Rareify counts, cut down the high counts to 100,000</li>
+<li>First look at all the counts data</li>
+</ul>
+<pre class="r"><code># rarecurve(newCounts,step=100,label=FALSE)
+t_newCounts = t(newCounts)
+rarefy(t_newCounts, 100000, se=FALSE, MARGIN=1)
+head(t_newCounts)
+unt_newCounts = t(t_newCounts)
+rare_totalCounts=colSums(unt_newCounts)
+head(rare_totalCounts)
+
+rrarefy(t_newCounts, 100000)
+unt_newCounts = t(t_newCounts)
+rare_totalCounts=colSums(unt_newCounts)
+head(rare_totalCounts)
+
+rarecurve(t_newCounts,step=100000)
+total &lt;- rowSums(t_newCounts)
+subset = subset(total, total &gt;50000)
+if (!requireNamespace(&quot;BiocManager&quot;, quietly = TRUE))
+    install.packages(&quot;BiocManager&quot;)
+BiocManager::install(version = &quot;3.12&quot;)
+BiocManager::install(&quot;metaseqR2&quot;)
+library(metaseqR2)
+downsample.counts(subset, seed=42)</code></pre>
 </div>
 <div id="outlier-analysis" class="section level2">
 <h2>Outlier Analysis</h2>
@@ -251,7 +283,7 @@ dds&lt;-DESeq(dds)</code></pre>
 <pre class="r"><code>vsd.ge=assay(vst(dds))
 rl=vst(dds)
 e=ExpressionSet(assay(rl), AnnotatedDataFrame(as.data.frame(colData(rl))))
-v = setwd(&quot;~/BI 586/FinalProject/outliers&quot;)
+v = setwd(&quot;/Users/mariaingersoll/Desktop/BU2020-2021/Ecol_and_Enviro_Genomics/BI586-git/Ofav_uptake_finalproj&quot;)
 arrayQualityMetrics(e,outdir=v,intgroup=c(&quot;treat&quot;),force=T)</code></pre>
 <pre class="r"><code>head(dds)
 res&lt;- results(dds)</code></pre>
@@ -340,7 +372,7 @@ head(rldpvals)</code></pre>
 <pre class="r"><code>rld=rldpvals[,1:6]
 head(rld)</code></pre>
 <ul>
-<li>dist computes and returns the distance matrix computed using the specified distance measure to compute distances between the rows of a data matrix (rld); determine the overall differences in expression between each sample</li>
+<li>dist computes and returns the distance matrix computed using the specified distance measure to compute distances between the rows of a data matrix (rld); determine the overall differences in expression between each sample based on the rlog values</li>
 <li>Turn the distances into a matrix</li>
 </ul>
 <pre class="r"><code>sampleDists &lt;- dist(t(rld))
@@ -396,7 +428,7 @@ head(pca_s)</code></pre>
 <li><p>Creating your PCA plot</p></li>
 <li><p>aes is aesthetic mappings, how variables are mapped to visual properties</p></li>
 <li><p>You can see from this plot that the B samples have very high variance and that there’s no overlap between the samples</p></li>
-<li><p>I’m skipping the adonis part because it gave me an error and doesn’t seem that important</p></li>
+<li><p>Perform adonis to determine whether the conditions are significantly different</p></li>
 </ul>
 <pre class="r"><code>adonis(pca$x ~ treat, data = pca_s, method=&#39;eu&#39;, na.rm = TRUE)</code></pre>
 <p>Permutation: free Number of permutations: 719</p>
@@ -412,6 +444,13 @@ table(resD$padj&lt;0.01)
 #FALSE  TRUE 
 # 3294     4 
 summary(resD)
+  #out of 16148 with nonzero total read count
+  #adjusted p-value &lt; 0.1
+  #LFC &gt; 0 (up)       : 2, 0.012%
+  #LFC &lt; 0 (down)     : 27, 0.17%
+  #outliers [1]       : 19, 0.12%
+  #low counts [2]     : 12831, 79%
+  #(mean count &lt; 10)
 
 nrow(resD[resD$padj&lt;0.05 &amp; !is.na(resD$padj),])  # Num significantly differentially expressed genes excluding the no/low count genes   #20
 
@@ -430,10 +469,12 @@ nrow(resD[resD$padj&lt;0.1 &amp; resD$log2FoldChange &lt; 0 &amp; !is.na(resD$pa
 
 write.table(resD, file=&quot;D_2021.txt&quot;, quote=F, sep=&quot;\t&quot;)
 cd &lt;- read.table(&quot;D_2021.txt&quot;)
-head(cd)
-head(cd)
-
-cd
+head(cd)</code></pre>
+<ul>
+<li>Create a term go_input_D that has the -logpval as a neg number if the l2fc is &lt; 0 and a pos number if the l2fc is &gt; 0</li>
+<li>This term will go into the go analysis</li>
+</ul>
+<pre class="r"><code>cd
 go_input_D = cd %&gt;%
   tibble::rownames_to_column(var = &quot;iso&quot;) %&gt;%
   mutate(mutated_p = -log(pvalue)) %&gt;%
@@ -451,8 +492,9 @@ write.csv(go_input_D, file=&quot;D_GO.csv&quot;, quote=F, row.names=FALSE)</code
 <li><p>BP: Biological process</p></li>
 <li><p>CC: Cellular component</p></li>
 <li><p>Manipulated BD_DE.txt in excel following Sarah’s verbal instructions and loaded it here</p></li>
-<li><p>BD_DE_GO has the -log(p-values)</p></li>
-<li><p>From the timmy_uptake file, we got log2 fold change (MLE): treat D vs B</p></li>
+<li><p>BD_DE_GO has the mutated -log(p-values)<br />
+</p></li>
+<li><p>From the BI586_uptake file, we got log2 fold change (MLE): treat D vs B</p></li>
 <li><p>Reminder: this means that pos log2FC values indicate D is upregulated compared to B; The name provided in the second element (B) is the baseline</p></li>
 </ul>
 <pre class="r"><code>BD_DE_GO = read.csv(&quot;D_GO.csv&quot;)</code></pre>
@@ -485,7 +527,7 @@ source(&quot;gomwu.functions.R&quot;)</code></pre>
            clusterCutHeight=0.25)</code></pre>
 <p>NEW TRANSCRIPTOME: 18 GO terms at 10% FDR</p>
 <ul>
-<li>Returned 9 GO terms at 10% FDR</li>
+<li>Old transcriptome: Returned 9 GO terms at 10% FDR</li>
 <li>Plot results in a dendrogram</li>
 <li>absValue=-log(0.05,10); genes with the measure value exceeding this will be counted as “good genes”. Specify absValue=0.001 if you are doing Fisher’s exact test for standard GO enrichment or analyzing a WGCNA module (all non-zero genes = “good genes”).</li>
 <li>level1=0.1: FDR threshold for plotting. Specify level1=1 to plot all GO categories containing genes exceeding the absValue.</li>
@@ -536,7 +578,7 @@ resultsBP=gomwuPlot(input,goAnnotations,goDivision,
 )
 resultsBP</code></pre>
 <ul>
-<li><p>Returned 6 GO terms at 10% FDR</p></li>
+<li><p>Old transcriptome: Returned 6 GO terms at 10% FDR</p></li>
 <li><p>Here we are interested in the positive regulation of cell proliferation</p></li>
 <li><p>Now let’s run it for CC</p></li>
 </ul>
@@ -564,8 +606,8 @@ resultsCC=gomwuPlot(input,goAnnotations,goDivision,
 )
 resultsCC</code></pre>
 <ul>
-<li>Returned 18 GO terms of interest</li>
-<li>Interested in the oxidoreductase complex</li>
+<li>Old transcriptome: Returned 18 GO terms of interest</li>
+<li>Interested in the mitochondrial complexes</li>
 </ul>
 <p>INVESTIGATING DIFFERENTIAL EXPRESSION OF GENES IN SPECIFIC GO CATEGORIES - Using Dan Wuitchik’s code: <a href="https://github.com/wuitchik/Divergent-thermal-challenges-elicit-convergent-stress-signatures-in-aposymbiotic-Astrangia-poculata/blob/master/Astrangia_HotCold.pdf" class="uri">https://github.com/wuitchik/Divergent-thermal-challenges-elicit-convergent-stress-signatures-in-aposymbiotic-Astrangia-poculata/blob/master/Astrangia_HotCold.pdf</a> - First, looking at positive regulation of cell proliferation (from BP, <a href="GO:0008284" class="uri">GO:0008284</a>) - Load packages - Set up the variable iso2go which contains the ofav gene id and all of its associated GO terms</p>
 <pre class="r"><code>iso2go = read.table(&quot;orb_fav_iso2go_new.tab&quot;, sep=&quot;\t&quot;)
@@ -585,19 +627,19 @@ gene = iso2gene %&gt;%
        
 head(gene)</code></pre>
 <ul>
-<li>To get the rlog foldchange values, I’m going to manipulate the timmy uptake file (which I will save in a variable called BD_DE)</li>
+<li>To get the rlog foldchange values, I’m going to manipulate the BI586 uptake file (which I will save in a variable called BD_DE)</li>
 </ul>
 <pre class="r"><code>head(read.csv(&quot;BI586_uptake_RLDandPVALS.csv&quot;))
 BD_DE = read.csv(&quot;BI586_uptake_RLDandPVALS.csv&quot;)
-
+library(dplyr)
 head(BD_DE)
 rlog_BD = BD_DE[,1:7] %&gt;%
-  rename(gene_ID = X)
+  dplyr::rename(gene_ID = X)
 head(rlog_BD)</code></pre>
 <ul>
-<li><p>rlog_BD just has the isoform names (called Gene_id) and the log2FC for each sample</p></li>
+<li><p>rlog_BD just has the isoform names (called gene_ID) and the log2FC for each sample</p></li>
 <li><p>could have also used the tidyverse select function instead of [,1:7] here, Dan says it’s better to keep the same format so using select would have been better</p></li>
-<li><p>Next, make a variable that contains all the genes that correspond to <a href="GO:0008284" class="uri">GO:0008284</a></p></li>
+<li><p>Next, make a variable that contains all the genes that correspond to the GO term for pos reg of cell prolif <a href="GO:0008284" class="uri">GO:0008284</a></p></li>
 </ul>
 <pre class="r"><code>GO_0008284 = iso2go %&gt;%
   filter(str_detect(GO.terms, &quot;GO:0008284&quot;)) %&gt;%
@@ -605,7 +647,7 @@ head(rlog_BD)</code></pre>
   left_join(gene) %&gt;%
   mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %&gt;%
   column_to_rownames(var = &quot;gene_symbol&quot;) %&gt;%
-  dplyr::select(-GO.terms, -Description, -Gene_id) %&gt;%
+  dplyr::select(-GO.terms, -description, -gene_ID) %&gt;%
   drop_na() %&gt;%
   dplyr::select(sort(current_vars()))</code></pre>
 <pre class="r"><code>head(GO_0008284)
@@ -621,20 +663,23 @@ colnames(rlog_BD)</code></pre>
 <ul>
 <li><p>Yellow to white correspond to upregulation and red corresponds to downregulation</p></li>
 <li><p>Now doing the same for oxidoreductase</p></li>
-<li><p>Oxidoreductase complex from CC (<a href="GO:1990204" class="uri">GO:1990204</a>); oxidoreductase activity (<a href="GO:0016491" class="uri">GO:0016491</a>); oxidoreductase activity, acting on paired donors etc. (<a href="GO:0016715" class="uri">GO:0016715</a>)</p></li>
+<li><p>Oxidoreductase complex from CC (<a href="GO:1990204" class="uri">GO:1990204</a>); oxidoreductase activity from MF (<a href="GO:0016491" class="uri">GO:0016491</a>)</p></li>
 <li><p>To filter for multiple terms, use | (the symbol that is shift back slash) and quotes only outside all the terms</p></li>
 </ul>
 <pre class="r"><code>oxidoreductase = iso2go %&gt;%
-  filter(str_detect(GO.terms, &quot;GO:1990204|GO:0016491|GO:0016715&quot;)) %&gt;%
+  filter(str_detect(GO.terms, &quot;GO:1990204|GO:0016491&quot;)) %&gt;%
   left_join(rlog_BD) %&gt;%
   left_join(gene) %&gt;%
   mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %&gt;%
   column_to_rownames(var = &quot;gene_symbol&quot;) %&gt;%
-  dplyr::select(-GO.terms, -Description, -Gene_id) %&gt;%
+  dplyr::select(-GO.terms, -description, -gene_ID) %&gt;%
   drop_na() %&gt;%
   dplyr::select(sort(current_vars()))
-head(oxidoreductase)</code></pre>
-<p>Plot a heatmap of the differential expression of ALL the genes that correspond to the oxidoreductase GO terms above</p>
+head(oxidoreductase)
+nrow(oxidoreductase)</code></pre>
+<ul>
+<li>92 genes that correspond to these two GO terms Plot a heatmap of the differential expression of ALL the genes that correspond to the oxidoreductase GO terms above</li>
+</ul>
 <pre class="r"><code>heatmap_oxidoreductase = heatmap.2(as.matrix(oxidoreductase), Rowv = TRUE, Colv = TRUE, scale = &quot;row&quot;,
                                dendrogram = &quot;both&quot;,
                                trace = &quot;none&quot;,
@@ -645,13 +690,14 @@ head(oxidoreductase)</code></pre>
 <li><p>One way to mitigate this is to take the means of the rows, subtract the mean from the original value, and plot the result instead of the original value</p></li>
 <li><p>We’ll also be filtering for only those genes that are significantly differentially expressed between recruits hosting D vs B</p></li>
 <li><p>Now we want to make new heatmaps of just those genes in cell prolif and oxidoreductase that are significantly differentially expressed (we will use an alpha of 0.1)</p></li>
-<li><p>Filter the timmy uptake data for all genes significantly differentially expressed (alpha = 0.1 for this section, we will use the more stringent 0.05 later)</p></li>
+<li><p>Filter the BI586 uptake data for all genes significantly differentially expressed (alpha = 0.1 for this section, we will use the more stringent 0.05 later)</p></li>
 </ul>
 <pre class="r"><code>BD_DE_10 = filter(BD_DE, pval.BD &lt;= 0.1, preserve = TRUE)
 head(BD_DE_10) 
 rlog_BD_10 = BD_DE_10[,1:7] %&gt;%
-  rename(Gene_id = X)
-head(rlog_BD_10)</code></pre>
+  dplyr::rename(gene_ID = X)
+head(rlog_BD_10)
+nrow(rlog_BD_10)</code></pre>
 <ul>
 <li><p>rlog_BD_10 has all the genes that are sig DE with alpha=0.1 and does not contain the p-val nor the adj p-val</p></li>
 <li><p>Now search within this list for all genes that correspond to the GO term for pos reg of cell prolif and call this new list GO_0008284_sig</p></li>
@@ -662,10 +708,11 @@ head(rlog_BD_10)</code></pre>
   left_join(gene) %&gt;%
   mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %&gt;%
   column_to_rownames(var = &quot;gene_symbol&quot;) %&gt;%
-  dplyr::select(-GO.terms, -Description, -Gene_id) %&gt;%
+  dplyr::select(-GO.terms, -description, -gene_ID) %&gt;%
   drop_na() %&gt;%
   dplyr::select(sort(current_vars()))
-GO_0008284_sig</code></pre>
+GO_0008284_sig
+nrow(GO_0008284_sig)</code></pre>
 <ul>
 <li>We have 6 genes, plot them in a heatmap but this time use the calculated difference from the mean</li>
 </ul>
@@ -683,12 +730,12 @@ heatmap_GO_0008284_sig = heatmap.2(as.matrix(explc_cellprolif), col = col0, Rowv
 <li><p>Now, search within rlog_BD_10 for all the sig DE genes that correspond to the oxidoreductase terms</p></li>
 </ul>
 <pre class="r"><code>oxidoreductase_sig = iso2go %&gt;%
-  filter(str_detect(GO.terms, &quot;GO:1990204|GO:0016491|GO:0016715&quot;)) %&gt;%
+  filter(str_detect(GO.terms, &quot;GO:1990204|GO:0016491&quot;)) %&gt;%
   left_join(rlog_BD_10) %&gt;%
   left_join(gene) %&gt;%
   mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %&gt;%
   column_to_rownames(var = &quot;gene_symbol&quot;) %&gt;%
-  dplyr::select(-GO.terms, -Description, -Gene_id) %&gt;%
+  dplyr::select(-GO.terms, -description, -gene_ID) %&gt;%
   drop_na() %&gt;%
   dplyr::select(sort(current_vars()))
 oxidoreductase_sig</code></pre>
@@ -705,49 +752,103 @@ heatmap_oxidoreductase_sig = heatmap.2(as.matrix(explc_oxr), col = col0, Rowv = 
                                    main = &quot;GO Oxidoreductase&quot;,
                                    margin = c(5,15))</code></pre>
 <ul>
-<li>For the final step, I’m going to make a heatmap of all the genes that are differentially regulated (alpha = 0.05 to account for the count differences) that will allow for further exploration</li>
+<li>For the final step, I’m going to make a heatmap of all the genes that are differentially regulated (alpha = 0.05 and alpha = 0.01 to account for the count differences) that will allow for further exploration</li>
 </ul>
 <pre class="r"><code>BD_DE_05 = filter(BD_DE, pval.BD &lt;= 0.05, preserve = TRUE)
 head(BD_DE_05) 
 rlog_BD_05 = BD_DE_05[,1:7] %&gt;%
-  rename(gene_ID = X)
-head(rlog_BD_05)</code></pre>
-<pre class="r"><code>sigDEG_BD = iso2go %&gt;%
-  left_join(rlog_BD_05) %&gt;%
+  dplyr::rename(gene_ID = X)
+head(rlog_BD_05)
+nrow(rlog_BD_05)
+
+BD_DE_01 = filter(BD_DE, pval.BD &lt;= 0.01, preserve = TRUE)
+head(BD_DE_01) 
+rlog_BD_01 = BD_DE_01[,1:7] %&gt;%
+  dplyr::rename(gene_ID = X)
+head(rlog_BD_01)
+nrow(rlog_BD_01)</code></pre>
+<ul>
+<li>alpha of 0.05 yields 400 terms which is unmanageable</li>
+<li>alpha of 0.01 yields 120 terms which is better</li>
+<li>Let’s also try padj alpha of 0.1:</li>
+</ul>
+<pre class="r"><code>BD_DE_adj = filter(BD_DE, padj.BD &lt;= 0.1, preserve = TRUE)
+head(BD_DE_adj) 
+rlog_BD_adj = BD_DE_adj[,1:7] %&gt;%
+  dplyr::rename(gene_ID = X)
+head(rlog_BD_adj)
+nrow(rlog_BD_adj)</code></pre>
+<ul>
+<li>padj yields 29 terms which is pretty manageable</li>
+</ul>
+<pre class="r"><code>sigDEG_BD_adj = iso2go %&gt;%
+  left_join(rlog_BD_adj) %&gt;%
   left_join(gene) %&gt;%
   mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %&gt;%
   column_to_rownames(var = &quot;gene_symbol&quot;) %&gt;%
   dplyr::select(-GO.terms, -description, -gene_ID) %&gt;%
   drop_na() %&gt;%
   dplyr::select(sort(current_vars()))
-head(sigDEG_BD)
-nrow(sigDEG_BD)</code></pre>
+head(sigDEG_BD_adj)
+nrow(sigDEG_BD_adj)
+
+sigDEG_BD_01 = iso2go %&gt;%
+  left_join(rlog_BD_01) %&gt;%
+  left_join(gene) %&gt;%
+  mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %&gt;%
+  column_to_rownames(var = &quot;gene_symbol&quot;) %&gt;%
+  dplyr::select(-GO.terms, -description, -gene_ID) %&gt;%
+  drop_na() %&gt;%
+  dplyr::select(sort(current_vars()))
+head(sigDEG_BD_01)
+nrow(sigDEG_BD_01)</code></pre>
 <ul>
-<li>sigDEG_BD are all my significant DEGs between B and D in the right format with alpha of 0.05</li>
-<li>First making a heatmap of the raw values</li>
+<li>sigDEG_BD_adj are all my significant DEGs between B and D in the right format with padj of 0.1</li>
+<li>Only 17 out of the 29 DEGs had annotated GO terms</li>
+<li>sigDEG_BD_01 are all my significant DEGs between B and D in the right format with pval of 0.01</li>
+<li>Only 74 out of the 120 DEGs had annotated GO terms</li>
+<li>First making a heatmap of the raw values for the adj</li>
 </ul>
-<pre class="r"><code>heatmap_sigDEG = heatmap.2(as.matrix(sigDEG_BD), col = col0, Rowv = TRUE, Colv = TRUE, scale = &quot;row&quot;,
+<pre class="r"><code>heatmap_sigDEG_adj = heatmap.2(as.matrix(sigDEG_BD_adj), col = col0, Rowv = TRUE, Colv = TRUE, scale = &quot;row&quot;,
                            dendrogram = &quot;both&quot;,
                            trace = &quot;none&quot;,
-                           main = &quot;Significant DEG&quot;,
+                           main = &quot;Significant DEG, padj &lt; 0.1&quot;,
                            margin = c(5,15))</code></pre>
 <ul>
-<li>Now calculating the difference from the mean and making that a heatmap</li>
+<li>A lot of the terms are un-annotated</li>
+<li>Now calculating the difference from the mean of the padj DEGs and making that a heatmap</li>
 </ul>
-<pre class="r"><code>sigDEG_BD_means = apply(sigDEG_BD, 1, mean)
-explc_sig = sigDEG_BD-sigDEG_BD_means
-heatmap_sigDEG_means = heatmap.2(as.matrix(explc_sig), col = col0, Rowv = TRUE, Colv = TRUE, scale = &quot;row&quot;,
+<pre class="r"><code>sigDEG_BD_means_adj = apply(sigDEG_BD_adj, 1, mean)
+explc_sig_adj = sigDEG_BD_adj-sigDEG_BD_means_adj
+heatmap_sigDEG_means_adj = heatmap.2(as.matrix(explc_sig_adj), col = col0, Rowv = TRUE, Colv = TRUE, scale = &quot;row&quot;,
                            dendrogram = &quot;both&quot;,
                            trace = &quot;none&quot;,
-                           main = &quot;Significant DEG Mean&quot;,
+                           main = &quot;Significant DEG Mean, padj &lt; 0.1&quot;,
+                           margin = c(5,15))</code></pre>
+<ul>
+<li>Do the same with the pval of 0.01</li>
+</ul>
+<pre class="r"><code>heatmap_sigDEG_01 = heatmap.2(as.matrix(sigDEG_BD_01), col = col0, Rowv = TRUE, Colv = TRUE, scale = &quot;row&quot;,
+                           dendrogram = &quot;both&quot;,
+                           trace = &quot;none&quot;,
+                           main = &quot;Significant DEG, pval &lt; 0.01&quot;,
+                           margin = c(5,15))
+
+sigDEG_BD_means_01 = apply(sigDEG_BD_01, 1, mean)
+explc_sig_01 = sigDEG_BD_01-sigDEG_BD_means_01
+heatmap_sigDEG_means_01 = heatmap.2(as.matrix(explc_sig_01), col = col0, Rowv = TRUE, Colv = TRUE, scale = &quot;row&quot;,
+                           dendrogram = &quot;both&quot;,
+                           trace = &quot;none&quot;,
+                           main = &quot;Significant DEG Mean, pval &lt; 0.01&quot;,
                            margin = c(5,15))</code></pre>
 <ul>
 <li>Make this list of genes and expression values into a csv file for future reference</li>
 <li>Also attach the jpg image of the heatmap so that all the gene symbols are visible</li>
 </ul>
-<pre class="r"><code>write.csv(explc_sig, &quot;0.5DEG_BD_genesymbols.csv&quot;, quote = F)
+<pre class="r"><code>write.csv(explc_sig_adj, &quot;0.1adjDEG_BD_genesymbols.csv&quot;, quote = F)
+write.csv(explc_sig_01, &quot;0.01pvalDEG_BD_genesymbols.csv&quot;, quote = F)
 knitr::opts_chunk$set(echo = TRUE)
-knitr::include_graphics(&quot;Ofav 0.5 Sig DEG Mean Heatmap.jpg&quot;)</code></pre>
+knitr::include_graphics(&quot;Ofav Adj 0.1 Sig DEG Mean Heatmap.jpg&quot;)</code></pre>
 <ul>
 <li>MAIN FINDINGS:</li>
 <li>From GO MWU analysis of ranked GO term enrichment, we found that Postitive Regulation of Cell Proliferation and various Oxidoreductase activities are enriched in samples hosting D compared to B recruits</li>
