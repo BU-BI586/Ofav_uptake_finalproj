@@ -595,29 +595,37 @@ head(rlog_BD)
 
 - Next, make a variable that contains all the genes that correspond to the GO terms of interest, first doing mitochondrial membrane
 ```{r, warning=FALSE, eval=FALSE}
-mitochondria = iso2go %>%
-  filter(str_detect(GO.terms, "GO:0044455|GO:0044429")) %>%
+cc = read.csv("CC_rare_D_GO.csv", sep="\t")
+head(cc)
+colnames(cc)[4]="gene_ID"
+head(cc)
+mitochondria = cc %>%
+  filter(str_detect(term, "GO:0044455|GO:0044429")) %>%
   left_join(rlog_BD) %>%
   left_join(gene) %>%
   mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %>%
   column_to_rownames(var = "gene_symbol") %>%
-  dplyr::select(-GO.terms, -description, -gene_ID) %>%
+  dplyr::select(-name, -term, -lev, -value, -description, -gene_ID) %>%
   drop_na() %>%
   dplyr::select(sort(current_vars()))
 ```
 
 ```{r, eval=FALSE}
 head(mitochondria)
-colnames(rlog_BD)
+nrow(mitochondria)
 ```
 
-- Plot a heatmap of the differential expression of ALL the genes that correspond to GO_0008284 pos reg of cell prolif
+- 71 terms correspond to these parent GO terms for mitochondrial function
+- Plot a heatmap of the differential expression of ALL the genes that correspond to mitochondrial membrane function
+- Then calculate the mean and plot that
 ```{r,eval=FALSE}
-heatmap_GO_0008284 = heatmap.2(as.matrix(GO_0008284), Rowv = TRUE, Colv = FALSE, scale = "row",
+heatmap_mit = heatmap.2(as.matrix(mitochondria), Rowv = TRUE, Colv = FALSE, scale = "row",
           dendrogram = "both",
           trace = "none",
-          main = "GO_0008284 positive regulation of cell proliferation",
+          main = "GO Mitochondria",
           margin = c(5,15))
+
+
 ```
 
 - Yellow to white correspond to upregulation and red corresponds to downregulation
@@ -667,28 +675,29 @@ nrow(rlog_BD_10)
 
 - Now search within this list for all genes that correspond to the GO term for pos reg of cell prolif and call this new list GO_0008284_sig
 ```{r,eval=FALSE}
-GO_0008284_sig = iso2go %>%
-  filter(str_detect(GO.terms, "GO:0008284")) %>%
+GO_mit_sig = cc %>%
+  filter(str_detect(term, "GO:0044455|GO:0044429")) %>%
   left_join(rlog_BD_10) %>%
   left_join(gene) %>%
   mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %>%
   column_to_rownames(var = "gene_symbol") %>%
-  dplyr::select(-GO.terms, -description, -gene_ID) %>%
+  dplyr::select(-name, -term, -lev, -value, -description, -gene_ID) %>%
   drop_na() %>%
   dplyr::select(sort(current_vars()))
-GO_0008284_sig
-nrow(GO_0008284_sig)
+GO_mit_sig
+nrow(GO_mit_sig)
+
 ```
-- We have 6 genes, plot them in a heatmap but this time use the calculated difference from the mean
+- We have 10 genes, plot them in a heatmap but this time use the calculated difference from the mean
 ```{r,eval=FALSE}
-GO_0008284_means_sig = apply(GO_0008284_sig, 1, mean)
-explc_cellprolif = GO_0008284_sig-GO_0008284_means_sig
-head(explc_cellprolif)
+GO_mit_means_sig = apply(GO_mit_sig, 1, mean)
+explc_mit = GO_mit_sig-GO_mit_means_sig
+head(explc_mit)
 col0=colorRampPalette(rev(c("chocolate1","#FEE090","grey10", "cyan3","cyan")))(100)
-heatmap_GO_0008284_sig = heatmap.2(as.matrix(explc_cellprolif), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
+heatmap_GO_mit_sig = heatmap.2(as.matrix(explc_mit), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
                                dendrogram = "both",
                                trace = "none",
-                               main = "GO_0008284 positive regulation of cell proliferation",
+                               main = "GO Mitochondrial Membrane",
                                margin = c(5,15))
 ```
 
@@ -829,8 +838,4 @@ knitr::include_graphics("Ofav Adj 0.1 Sig DEG Mean Heatmap.jpg")
 
 
 - MAIN FINDINGS:
-- From GO MWU analysis of ranked GO term enrichment, we found that Postitive Regulation of Cell Proliferation and various Oxidoreductase activities are enriched in samples hosting D compared to B recruits
-- From analysis of all significantly differentially expressed genes, we identified the following:
-- SODC (superoxide dismutase) is strongly upregulated in coral hosting D compared to B; SODC is an NF-kB response gene; this is consistent with our expectations that coral hosting D would perform better under thermal/oxidative stress because increased SOD means an increased ability to deal with oxidative stress
-- To a lesser extent, HSP110 may be downregulated in D compared to B, but this may be an effect of count value
-- TNFSF10 and TRAF4.2 were identified as upregulated in one B (B.1) compared to D (i.e., downregulated in D), but again, this may be an effect of count size
+- 
