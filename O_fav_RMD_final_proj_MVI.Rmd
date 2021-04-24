@@ -335,42 +335,46 @@ adonis(pca$x ~ treat, data = pca_s, method='eu', na.rm = TRUE)
 The `adonis` results show that PC1 is significant with an alpha of 0.1, and this can be considered trending towards significance where PC1 is explaining 35% of the variance between the two samples. 
 
 ## Pairwise Comparison of Coral Hosting Strain B vs Strain D
-
-```{r,eval=FALSE}
+The treat column is represented as a factor with two levels being coral hosting strain D or strain B, where coral hosting strain B serve as the control. These are stored in a new column called D Then the `results` function extracts the results table of `DESeqDataSet` with the contrast set as treat, between strain D and strain B
+```{r}
 colData$D<-factor(colData$treat, levels=c("D","B"))
-
 resD <- results(dds, contrast=c("treat","D","B"))
-#how many FDR < 10%?
+```
+
+The results table reports the breakdown of how many genes had an adjusted p-value below 0.01, to be considered significant. The summary of the results with a contrast by treat (strain) is also displayed below. Notice that while only 4 of genes were upregulated, 26 were downregulated.
+
+```{r}
 table(resD$padj<0.01)
-#FALSE  TRUE 
-# 1022     7 
 summary(resD)
-  #out of 11707 with nonzero total read count
-  #adjusted p-value < 0.1
-  #LFC > 0 (up)       : 5, 0.043%
-  #LFC < 0 (down)     : 25, 0.21%
-  #outliers [1]       : 1, 0.0085%
-  #low counts [2]     : 10677, 91%
-  #(mean count < 12)
+```
 
-nrow(resD[resD$padj<0.05 & !is.na(resD$padj),])  # Num significantly differentially expressed genes excluding the no/low count genes   #14
+The number of genes that have an adjusted p-value less than 0.05 and that do not have NA values for the adjusted p-values, are counted and reported below.
 
-# dev.off()
-plotMA(resD, main="B vs D")
+```{r}
+nrow(resD[resD$padj<0.05 & !is.na(resD$padj),]) 
+```
+
+```{r, echo=FALSE, fig.cap="**Figure 9.** "}
 plotMA(resD, main="B vs D", ylim=c(-2,2))
+```
 
+
+```{r include=FALSE}
 results <- as.data.frame(resD)
-head(results)
+```
 
+
+The number of upregulated and downregulated genes (respectively) that have an adjusted p-value less than 0.1 and that do not have NA values for the adjusted p-value, are counted and reported below.
+```{r}
 nrow(resD[resD$padj<0.1 & resD$log2FoldChange > 0 & !is.na(resD$padj),])
-
 nrow(resD[resD$padj<0.1 & resD$log2FoldChange < 0 & !is.na(resD$padj),])
-#UP 5
-#DOWN 25
+```
 
+
+A table of the results with a contrast by treat between coral hosting strain B and coral hosting strain D is generated. The file is read into a variable called `cd` that will be used to genereate the GO table later on. 
+```{r,eval=TRUE}
 write.table(resD, file="rare_D_2021.txt", quote=F, sep="\t")
 cd <- read.table("rare_D_2021.txt")
-head(cd)
 ```
 
 ## GO table for MWU
