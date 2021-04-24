@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 #### R Version
-R version 4.0.2 was used for this analysis. 
+R version 4.0.3 was used for this analysis. 
 
 #### Packages
 The following packages were used to clean, analyze, and visualize data. Packages were installed with [Bioconductor](https://bioconductor.org/biocLite.R) version 3.12 or the [Cran Repository](http://cran.us.r-project.org).   
@@ -31,10 +31,6 @@ library("pheatmap")                 #Version 1.0.12
 library("vegan")                    #Version 2.5.7
 library("ggplot2")                  #Version 3.3.3
 library("ggrepel")                  #Version 0.9.1
-
-#--------------
-library("affycoretools")            #Version 1.60.1
-library("genefilter")               #Version 1.70.0
 ```
 
 ```{r, eval=FALSE, echo=FALSE}
@@ -57,8 +53,12 @@ packageVersion("ggrepel")
 
 ## Raw Data Filtering
 
-```{r}
+```{r, eval=FALSE}
 setwd("/Users/mariaingersoll/Desktop/BU2020-2021/Ecol_and_Enviro_Genomics/BI586-git/Ofav_uptake_finalproj")
+```
+
+```{r, echo=FALSE}
+setwd("~/BI 586/FinalProject")
 ```
 
 Counts data was stored in a text file that was read in as a data frame to a variable called `countData`. Note that this data was pre-filtered for a base mean of 3. The column names are renamed based on the the strain type and replicate number for readability sake. The length of the data frame is reported and it represents the number of isoforms.
@@ -70,7 +70,7 @@ length(countData[,1])
 ```
 
 The total sum of isoform counts for each condition are displayed below in a barplot. The minimum and maximum are as reported below. 
-```{r, echo=FALSE, fig.cap="**Figure 0.** All raw sequencing count values from each Orbicella faveolata sample demonstrating various degrees of library sizes. Green bars are O. faveolata hosting Symbiodiniaceae strain B01 (replicates: BR.A, BR.B, BR.C, BR.D). Red bars are O. faveolata hosting Symbiodiniaceae strain C (triplicates: CR.A,CR.B, CR.c). Blue bars are O. faveolata hosting Symbiodiniaceae strain D (replicates: DR.A, DR.B, DR.C, DR.D).", fig.width=10}
+```{r, echo=FALSE, fig.cap="**Figure 1.** All raw sequencing count values from each *Orbicella faveolata* sample demonstrating various degrees of library sizes. Green bars are *O. faveolata* hosting Symbiodiniaceae strain B01 (replicates: BR.A, BR.B, BR.C, BR.D). Red bars are *O. faveolata* hosting Symbiodiniaceae strain C (triplicates: CR.A,CR.B, CR.c). Blue bars are *O. faveolata* hosting Symbiodiniaceae strain D (replicates: DR.A, DR.B, DR.C, DR.D).", fig.width=10}
 totalCounts=colSums(countData)
 barplot(totalCounts, col=c("green",  "green", "green", "green", "red", "red", "red", "blue", "blue" , "blue" , "blue"), ylab="Raw Counts", xlab="Coral Hosting Symbiodiniaceae Strains")
 ```
@@ -80,55 +80,73 @@ min(totalCounts)
 max(totalCounts)
 ```
 
+#### Remove small library size replicates
 
-Due to the small library sizes of one replicate from the strain B, one replicate from the strain D conditions, and all replicates from O. faveolata hosting Symbiodiniaceae strain C were removed. `newCounts` is generated from the original `countData` but only selecting the samples that have larger library size and excluding the following ones as they are too small. 
+Due to the small library sizes, one replicate from the strain B, one replicate from the strain D conditions, and all replicates from O. faveolata hosting Symbiodiniaceae strain C were removed. `newCounts` is generated from the original `countData` but only selecting the samples that have larger library size and excluding the following ones as they are too small. 
 ```{r}
 newCounts = countData %>% 
   dplyr::select(-BR.D, -CR.A, -CR.B, -CR.C, -DR.B)
 ```
 
-
-```{r, echo=FALSE, fig.cap="**Figure 1.** Selected raw sequencing count values from each Orbicella faveolata sample demonstrating various degrees of library sizes. Green bars are O. faveolata hosting Symbiodiniaceae strain B01 (triplicates: BR.A, BR.B, BR.C). Blue bars are O. faveolata hosting Symbiodiniaceae strain D (triplicates: DR.A, DR.C, DR.D). One replicate from the strain B condition, one replicate from the strain D condition, and all replicates from O. faveolata hosting Symbiodiniaceae strain C were removed prior to this analysis due to small library sizes."}
+The total sum of isoform counts for each condition are displayed below in a barplot. The minimum and maximum are as reported below. 
+```{r, echo=FALSE, fig.cap="**Figure 2.** Selected raw sequencing count values from each *Orbicella faveolata* sample demonstrating various degrees of library sizes. Green bars are *O. faveolata* hosting Symbiodiniaceae strain B01 (triplicates: BR.A, BR.B, BR.C). Blue bars are *O. faveolata* hosting Symbiodiniaceae strain D (triplicates: DR.A, DR.C, DR.D). One replicate from the strain B condition, one replicate from the strain D condition, and all replicates from *O. faveolata* hosting Symbiodiniaceae strain C were removed prior to this analysis due to small library sizes."}
 totalCounts=colSums(newCounts)
 barplot(totalCounts, col=c("green", "green", "green", "blue" , "blue" , "blue"), ylab="Raw Counts", xlab="Coral Hosting Symbiodiniaceae Strains")
+```
+
+```{r}
 min(totalCounts)
 max(totalCounts)
 ```
 
-*Note: In the above barplot, we see that despite the previous filtering, there are still conditions that have large library sizes (BR.C, DR.A, and DR.C) compared to other conditions that have very low library sizes (BR.A, BR.B, annd DR.B). This inconsistency in library size must be kept in mind for conclusions drawn from later analysis of the differential expression of genes between coral hosting strain B and coral hosting strain D.*
+*Note: In the above barplot, we see that despite the previous filtering, there are still conditions that have large library sizes (BR.C, DR.A, and DR.C) compared to other conditions that have very low library sizes (BR.A, BR.B, annd DR.B). This inconsistency in library size is the reason why the following rarefaction was performed.* 
 
-- Rarefy counts, cut down the high counts to 100,000
-- Call your new rarefied count data "rare" and the new rarefied count data "unt_newCounts"
-```{r}
+#### Rarefy large sample size replicates
+
+Because the difference between the minimum and maximum library size was so large, the data was rarefied and high counts were cut down to 100,000. To use the `rrarefy` function from the `vegan` package, the `newCounts` data frame variable had to be transposed with the `t` function. This transposed newCounts called `t_newCounts` data frame was supplied to `rrarefy` with a subsample size of 100,000. The new rarified counts are called `rare` and can be transposed again to provide the rarified counts used to generate the following bar plot. 
+
+The rarefaction steps were only run once and the new counts were saved to a file. 
+```{r, warning=FALSE, eval=FALSE}
 t_newCounts = t(newCounts)
 rare = rrarefy(t_newCounts, 100000)
 unt_newCounts = t(rare)
-head(unt_newCounts)
+write.table(unt_newCounts, file="rare_orbfav_uptake_counts.txt", quote=F, sep="\t")
+```
+
+The rarefaction counts are read in from the file. This is because every time `rrarfey` is run it randomly rarefies the replicates with counts greater than 100,000. This way the same counts are used for all further analysis. 
+```{r}
+unt_newCounts = read.table(file="rare_orbfav_uptake_counts.txt", sep="\t")
+```
+
+The total sum of isoform counts for each condition are displayed below in a barplot. The minimum and maximum are as reported below. 
+```{r, echo=FALSE, fig.cap="**Figure 3.** *Orbicella faveolata* samples with raw sequencing count values greater than 100,000 were rarefied to a maximum of 100,000 total counts. Green bars are *O. faveolata* hosting Symbiodiniaceae strain B01 (triplicates: BR.A, BR.B, BR.C). Blue bars are *O. faveolata* hosting Symbiodiniaceae strain D (triplicates: DR.A, DR.C, DR.D). The samples that were rarefied were replicates BR.C, DR.A, and DR.D, while all other replicates remain as original."}
 rare_totalCounts=colSums(unt_newCounts)
-head(rare_totalCounts)
 barplot(rare_totalCounts, col=c("green", "green", "green", "blue" , "blue" , "blue"), ylab="Raw Counts", xlab="Coral Hosting Symbiodiniaceae Strains")
 ```
 
+```{r}
+min(rare_totalCounts)
+max(rare_totalCounts)
+```
+
+*NOTE: All following analysis will be performed with the rarefied data and it must be kept in mind for conclusions drawn about the differential expression of genes between coral hosting strain B and coral hosting strain D.*
 
 ## Outlier Analysis
 
-- Now create the vector "treat" of each strain
-- Then turn the vector "treat" into a dataframe called "g"
-- Rename the dataframe "colData"
-```{r, eval=FALSE}
+For outlier analysis, we first create a character vector `treat` holding the names of the strains of Symbiodiniaceae that each coral sample is hosting. The vector is converted to a dataframe and is renamed `colData` for further use. 
+```{r}
 treat=c( "B", "B", "B", "D", "D", "D")
 g=data.frame(treat)
-g
 colData<- g
-colData
 ```
 
-- run DESeqDataSetFromMatrix and name it dds with countData for matrix input, colData for columns, and "treat" to dictate how the counts for each gene depend on the variables in colData
-- then run DESeq on dds
-```{r results="hide", message=FALSE, eval=FALSE}
+`DESeqDataSetFromMatrix` was run on the `unt_newCounts` which represents the rarefied counts of the selected samples. The column data is set to the strain type and the design to the treatment vector so that it may dictate how the counts for each gene depend on the variables in colData. The `DESeq` step was run on the results of the prior step.
+```{r results="hide", message=FALSE, warning=FALSE, eval=TRUE}
 dds<-DESeqDataSetFromMatrix(countData=unt_newCounts, colData=colData, design=~treat)
 dds<-DESeq(dds)
 ```
+
+The `vst` function is the variance-stabilizing transformation which models the mean-variance relationship of replicates. The assay of `dds` generates a table with the mean-variance of each of the isoform treatments. The `as.data.frame(colData(rl)))` generates a table with the columns and a sizeFactor value that is converted into the formal `AnnotatedDataFrame` class. Both values are passed are used to create an `ExpressionSet` object which is used to generate the quality metrics with `arrayQualityMetrics` using the treat variable as the intgroup.
 
 ```{r, eval=FALSE}
 vsd.ge=assay(vst(dds))
@@ -137,122 +155,101 @@ e=ExpressionSet(assay(rl), AnnotatedDataFrame(as.data.frame(colData(rl))))
 v = setwd("/Users/mariaingersoll/Desktop/BU2020-2021/Ecol_and_Enviro_Genomics/BI586-git/Ofav_uptake_finalproj")
 arrayQualityMetrics(e,outdir=v,intgroup=c("treat"),force=T)
 ```
-- No outliers in rarefied data
+*NOTE: The array quality metrics showed that there were no outliers by the three detection methods: by distances between arrays, by boxplots, and by MA plots. Below is the heatmap of sample distance between arrays.*
 
 
-```{r, eval=FALSE}
+`results` extracts the results table from the DESeq analysis and the `DESeqDataSet` is used to generate the dispersion plot.
+```{r, warning=FALSE, message=FALSE, eval=TRUE}
 head(dds)
 res<- results(dds)
 ```
-- The above code gives the log2 fold change (MLE): treat D vs B
-- this means that pos log2FC values indicate D is upregulated compared to B
-- The name provided in the second element (B) is the baseline
 
--Next look at the dispersions plot, which basically just tells you the spread of your data
-
-
-```{r, echo=FALSE, fig.cap="Figure 2. Dispersion plot uptake", eval=FALSE}
+```{r, echo=FALSE, fig.cap="**Figure 4.** Scatter plot of dispersion estimates per gene (on the y-axis) versus the mean of normalized counts (on the x-axis) of isoforms identified in the treatment samples of *Orbicella faveolata*. Gene-wise dispersion estimates are in black, fitted estimates are in red, and final estimates are in blue as indicated by the legend.", eval=TRUE}
 plotDispEsts(dds, main="Dispersion plot Uptake")
 ```
 
-- Now we are going to retrieve the rlog data, which will give us better transformation when size factors vary across samples
-- regularized log transformation, transforms count data to log2 scale to minimize differences between samples for rows with small counts
-
-```{r, eval=FALSE}
+R log transformation is used on the data `dds` as a data normalization method. The rlog data provides a better transformation when size factors vary across samples by transforming to a log2 scale to minimize difference between samples for rows with small counts. This r log tranformation will be important for making heatmaps.
+```{r, eval=TRUE}
 rld <- rlogTransformation(dds, blind=TRUE)
-head(assay(rld))
-
 ```
-```{r, echo=FALSE, fig.cap="Figure 3. Histogram of r-log transformations", eval=FALSE}
+
+The rlog data `rld` can be converted to a matrix like object with `assay` that is then given to the `hist` function to generate a histogram of the r-log transformations. Since the rlog values can be positive or negative, the histogram shows the spread of those positive and negative values for all the samples. 
+```{r, echo=FALSE, fig.cap="**Figure 5.** A histogram of the binned r log transformations frequency of *Orbicella faveolata* data where the regularized log (r log) is the original count data on a log2 scale.", eval=TRUE}
 hist(assay(rld))
 ```
 
 
-- The assay function allows you to access the matrix-like data, so that you can view it bc head(rld) gives you just a summary
-- The histogram above displays the frequency of each binned rld count value
-
-
-- Making a sample distance heatmap
-- as.matrix attempts to turn its argument into a matrix
-- dist computes and returns the distance matrix computed using the specified distance measure to compute distances between the rows of a data matrix (assay(rld))
-- Create a sample heatmap of the relatedness based on the count distance/difference between samples
-```{r results="hide", message=FALSE, eval=FALSE}
+The matrix like object of the r log data `rld` is transposed and the `dist` function is performed on it to calculate the distance matrix using the specified distance measure to compute the distance between the rows. This is then stored in the `sampleDists` variable. 
+```{r results="hide", message=FALSE, eval=TRUE}
 sampleDists <- as.matrix(dist(t(assay(rld))))
 ```
 
-```{r, echo=FALSE, fig.cap="Figure 5. Sample distance heatmap where BR.C is clustering more with D.", eval=FALSE}
+The `sampleDists` matrix is used to generate a sample distance heatmap of relatednness based on the count distance or difference between samples as seen below.
+```{r, echo=FALSE, fig.cap="**Figure 6.** Sample distance heatmap where BR.C is clustering more with D.", eval=TRUE}
 heatmap.2(as.matrix(sampleDists), key=F, trace="none",
           col=colorpanel(100, "black", "white"),
           margin=c(10, 10))
 ```
 
-- Now look at results of dds comparing (average) B and D
-- The second term is the "control" we will use B as control in this case
-
-```{r, eval=FALSE}
+The `results` function is applied to the `dds` data using a contrast by treat where B serves as the control since it is listed as the second term. The results are stored in a variable called `resBD`. We isolate the column of the data set for the p-adjusted value, and below is a report of how many of the isoforms have a p-adjusted value less than 0.1. Additionally, a summary of the `resBD` is generated as well to analyze the count differences between B and D. 
+```{r, eval=TRUE}
 resBD <- results(dds, contrast=c("treat","D","B"))
-```
-- How many gene counts have FDR < 10%
-- Analyze the count differences between B and D
-- This is all quality control
-```{r, eval=FALSE}
 table(resBD$padj<0.1)
 summary(resBD)
 ```
 
-```{r, echo=FALSE, fig.cap="Figure 6. MA plot between B and D.", eval=FALSE}
-plotMA(resBD, main="B vs D")
+In the rarefied data, with an adjusted p-value of <0.1, 4 genes were significantly upregulated, and 26 were significantly downregulated in coral hosting strain D compared to coral hosting strain B. 
+
+```{r, echo=FALSE, fig.cap="**Figure 7.** *Orbicella faveolata* hosting Symbiodiniaceae strain B01 vs *O.faveolata* hosting Symbiodiniaceae strain D scatter plot of log fold changes (on the y-axis) versus the mean of normalized counts (on the x-axis) of the isoforms identified in the samples. The non significant data points are in gray, and significant data points are represented in blue. A positive log fold change indicates that D is upregulated compared to B01, and a negative log fold change indicates that D is downregulared compared to the baseline of B01.", eval=TRUE}
+plotMA(resBD, main="O.faveolata hosting strain B01 vs O.faveolata hosting strain D")
 ```
 
-- In rarefied data, with an adjusted pvalue of <0.1, 5 genes are significantly upregulated and 25 are significantly downregulated in D compared to B
-
-- Now make a table of the differential expression values (log2fc) between B and D
+A table of the log fold change values between coral hosting strain B and coral hosting strain D is generated. The file contains the log fold change, the p value, and the adjusted p value. 
 ```{r, eval=FALSE}
 write.table(resBD, file="rare_BD_DE.txt", quote=F, sep="\t")
-head(read.delim("rare_BD_DE.txt"))
 ```
-- "rare_BD_DE.txt" contains the log2FC, the pvalue, and the padj, as well as some other data that we don't really need
 
-- Get the p-values from your data file
-- Create valBD that is a table from resBD of just the pvalues and adjusted p-values (p-adj)
-- Then give the columns approprite names
-```{r, eval=FALSE}
+## P-values and R-log data
+
+A new table `valBD` is generated from the p-value and adjusted p-value from the original `resBD` table. The column names are appropriately set and the number of isoforms are confirmed to be the same as the original dataset, no data was lost. 
+```{r, eval=TRUE}
 valBD=cbind(resBD$pvalue, resBD$padj)
-head(valBD)
 colnames(valBD)=c("pval.BD", "padj.BD")
 length(valBD[,1])
 ```
-- Return a logical vector in which both cases (pval and padj) are complete (no missing values)
-```{r, eval=FALSE}
+
+
+A table of the number of complete cases where both the p-value and the adjusted p-value is present and not missing are reported. 
+```{r, eval=TRUE}
 table(complete.cases(valBD))
 ```
-- Make a table (that you can visualize via assay) of the rlogdata and pvals
-- Then make the column names for rld the same ones that were in colData$treat
-```{r, eval=FALSE}
-rlog=rlogTransformation(dds, blind=TRUE) 
-rld=assay(rlog)
-head(rld)
+
+The `rld` is the variable that holds the results of the `rlogTransformation` on the `dds` data where blind=True. The r log data is converted to a matrix like object with `assay` and the column names which were originally the names of each replicate are now converted to just the name of the strain that each coral sample is hosting. The number of isoforms are confirmed to be the same as the original dataset, and no data was lost. 
+```{r, eval=TRUE}
+rld=assay(rld)
 colnames(rld)=paste(colData$treat)
-head(rld)
 length(rld[,1])
 ```
-- Combine rld with your table of pval and padj values (valBD)
-```{r, eval=FALSE}
+
+The r log transformation data is combined with the p-value and the adjusted p-value that to generate the new table `rldpvals` with the dimensions reported below. A table of the number of complete cases where all values for each are isoform is present and not missing are reported. 
+```{r, eval=TRUE}
 rldpvals=cbind(rld,valBD)
-head(rldpvals)
 dim(rldpvals)
 table(complete.cases(rldpvals))
 ```
-- Create a new csv file from rldpvals
+
+The `rldpvals` are stored in a csv file for future use. 
 ```{r, eval=FALSE}
 write.csv(rldpvals, "rare_BI586_uptake_RLDandPVALS.csv", quote=F)
+rldpvals <- read.csv(file="rare_BI586_uptake_RLDandPVALS.csv", row.names=1)
 ```
+
+---------------------------------------------------------
+
 - Now we will create a heatmap of sample distances based on pvalues
 - Make a new variable for your csv file
-```{r, eval=FALSE}
-rldpvals <- read.csv(file="rare_BI586_uptake_RLDandPVALS.csv", row.names=1)
-head(rldpvals)
-```
+Read in the 
+
 - Make rld that a variable that just returns the first six columns with values (rownames then columns 1-6)
 ```{r, eval=FALSE}
 rld=rldpvals[,1:6]
@@ -279,50 +276,43 @@ heat.colors = colorRampPalette(rev(c("blue","yellow")),bias=0.3)(100)
 pheatmap(sampleDistMatrix,color = heat.colors,cex=0.9,border_color=NA,cluster_rows=T,cluster_cols=T)
 ```
 
+-----------------------------------------------
 
-- Now going to perform PCA on the data to visualize overall effect of experimental covariates and batch effects
-- t transposes the rld table and makes all the rows columns, and the columns rows. So here the isoform names that were rownames are now the column names. 
-```{r,eval=FALSE}
+## PCA Anlysis 
+
+To perform the Principal Component Analysis (PCA) on the data will allow us to visualize overall effect of experimental covariates and batch effects. We first must transpose the data table hols the r log transformation data assay. 
+```{r,eval=TRUE}
 rld_t=t(rld)
-head(rld)
 ```
 
-
-```{r results="hide",eval=FALSE}
-head(rld_t)
-```
-- prcomp performs a pca on given data matrix and returns results as an object of class prcomp
-```{r results="hide", warning=FALSE, eval=FALSE}
+The `prcomp` function performs a principal component analysis on the transformed r log data matrix where the variables should be shifted to be zero centered and that any data that contains NA should be omitted from the analysis. The an instance of the `prcomp` class is returned and stored in a variable called `pca`.
+```{r warning=FALSE, eval=TRUE}
 pca <- prcomp(rld_t,center = TRUE, na.action=na.omit)
-head(pca)
 ```
 
-- sdev is the standard deviations of the principal components
-- Using the sdev, calculate the proportion that each PC corresponds to the variance
-- Then round PC1 and PC2 (times 100, to 1 sigfig)
-```{r,eval=FALSE}
+`sdev` holds the standard deviations of the principal components and it can be used to calculate the proportion that each principal component corresponds to the variance. We can then round the PC1 and PC2 (which are the first and second items of the list) to one significant figure. 
+```{r,eval=TRUE}
 li <- pca$sdev^2 / sum(pca$sdev^2)
 pc1v <- round(li[1] * 100, 1)
 pc2v <- round(li[2] * 100, 1)
 ```
-- x from prcomp seems like it's the coordinates of each treatment in the PCA
-- turn pca$x into a dataframe
-```{r,eval=FALSE}
+
+
+The x column of the `prcomp` object holds the value of the rotated data, and this is all stored in the variable `pca_s`.
+```{r,eval=TRUE}
 pca_s <- as.data.frame(pca$x)
-head(pca_s)
 ```
-- Just take PC1 and PC2 and add your sample and treatment names
-```{r,eval=FALSE}
+
+Since we only care about the first two dimensions, of PC1 and PC2, only the first two rotated data values from `pca_s` are needed. New columns for samples and treatment names are added to the `pca_s` table. 
+```{r,eval=TRUE}
 pca_s <- pca_s[,c(1,2)]
 head(pca_s)
 pca_s$Samples = row.names(pca_s)
-head(pca_s)
 pca_s$treat=colData$treat
-head(pca_s)
 ```
-- Creating your PCA plot
-- aes is aesthetic mappings, how variables are mapped to visual properties
-```{r, echo=FALSE, fig.cap="Figure 8. Principal Component Analysis of B vs D.", eval=FALSE}
+
+Then the PCA plot can be generated from the PC1 and PC2 levels. 
+```{r, echo=FALSE, fig.cap="**Figure 8.** Principal component analysis of all samples in the subset of data where the PC1 along the x-axis has a 35.3% variance and the PC2 along the y-axis has a 31% variance. The legend shows the difference between *Orbicella faveolata* hosting Symbiodiniaceae strain B01 vs *O.faveolata* hosting Symbiodiniaceae strain D  samples. Adonis below shows that PC1 is significant with an alpha of 0.1, and this can be considered trending towards significance.", eval=TRUE}
 cbPalette <- c("darkorchid4","firebrick4")
 ggplot(pca_s, aes(PC1, PC2, color = treat, pch = treat)) +
   geom_point(size=3) +
@@ -335,25 +325,16 @@ ggplot(pca_s, aes(PC1, PC2, color = treat, pch = treat)) +
   ylab(paste0("PC2: ",pc2v,"% variance")) 
 ```
 
-- You can see from this plot that the B samples have very high variance and that there's no overlap between the samples
+The PCA plot shows that samples of coral hosting strain B have a very high variance, however there is no overlap between the samples by treatment. 
 
-- Perform adonis to determine whether the conditions are significantly different
-```{r,eval=FALSE}
+We then perform the `adonis` function on the rotated pca data with the treatment as the formula and the `prcomp` matrix as the data. The method for this adonis is euclidean and we select to remove any data with NA. The adonis will show whether the conditions are significantly different. 
+```{r, warnings=FALSE, message=FALSE, echo=FALSE, eval=TRUE}
 adonis(pca$x ~ treat, data = pca_s, method='eu', na.rm = TRUE)
 ```
 
-Call:
-adonis(formula = pca$x ~ treat, data = pca_s, method = "eu",      na.rm = TRUE) 
+The `adonis` results show that PC1 is significant with an alpha of 0.1, and this can be considered trending towards significance where PC1 is explaining 35% of the variance between the two samples. 
 
-Permutation: free
-Number of permutations: 719
-
-Terms added sequentially (first to last)
-
-          Df SumsOfSqs MeanSqs F.Model      R2 Pr(>F)
-treat      1    2219.9  2219.9  1.3566 0.25326    0.1
-Residuals  4    6545.6  1636.4         0.74674       
-Total      5    8765.5                 1.00000
+## Pairwise Comparison of Coral Hosting Strain B vs Strain D
 
 ```{r,eval=FALSE}
 colData$D<-factor(colData$treat, levels=c("D","B"))
@@ -392,6 +373,8 @@ cd <- read.table("rare_D_2021.txt")
 head(cd)
 ```
 
+## GO table for MWU
+
 - Create a term go_input_D that has the -logpval as a neg number if the l2fc is < 0 and a pos number if the l2fc is > 0
 - This term will go into the go analysis
 ```{r,eval=FALSE}
@@ -408,7 +391,7 @@ head(go_input_D)
 write.csv(go_input_D, file="rare_D_GO.csv", quote=F, row.names=FALSE)
 ```
 
-
+## GO analysis 
 ACTUAL DIFFERENTIAL GENE EXPRESSION ANALYSIS STARTS HERE
 - This is just the preliminary GO enrichment analysis of all the genes. The way gomwu works is that it performs rankings and gives you enrichment of GO terms in the ranked list. So GO terms that show up may not actually contain only genes that are significantly differentially expressed, that gene set is just enriched
 
@@ -749,7 +732,7 @@ nrow(rlog_BD_01)
 - alpha of 0.05 yields 270 terms
 - alpha of 0.01 yields 73 terms
 - Let's also try padj alpha of 0.1:
-```{r}
+```{r, eval=FALSE}
 BD_DE_adj = filter(BD_DE, padj.BD <= 0.1, preserve = TRUE)
 head(BD_DE_adj) 
 rlog_BD_adj = BD_DE_adj[,1:7] %>%
@@ -806,7 +789,7 @@ heatmap_sigDEG_means_adj = heatmap.2(as.matrix(explc_sig_adj), col = col0, Rowv 
                            margin = c(5,15))
 ```
 - Do the same with the pval of 0.01
-```{r}
+```{r, eval=FALSE}
 heatmap_sigDEG_01 = heatmap.2(as.matrix(sigDEG_BD_01), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
                            dendrogram = "both",
                            trace = "none",
@@ -837,5 +820,4 @@ knitr::include_graphics("Ofav Adj 0.1 Sig DEG Mean Heatmap.jpg")
 ```
 
 
-- MAIN FINDINGS:
-- 
+## Conclusions 
