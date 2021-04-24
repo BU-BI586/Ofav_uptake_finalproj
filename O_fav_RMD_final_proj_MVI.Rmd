@@ -489,6 +489,7 @@ resultsBP=gomwuPlot(input,goAnnotations,goDivision,
                   level3=0.01,
                   txtsize=1.5,
                   treeHeight=0.5,
+                  colors=c("dodgerblue2","firebrick1","skyblue","lightcoral")
 )
 resultsBP
 ```
@@ -540,7 +541,7 @@ Red is upregulated in coral hosting strain D and blue is downregulated in coral 
 ## Investigating DEGs in specific GO categories
 INVESTIGATING DIFFERENTIAL EXPRESSION OF GENES IN SPECIFIC GO CATEGORIES
 - Using Dan Wuitchik's code: https://github.com/wuitchik/Divergent-thermal-challenges-elicit-convergent-stress-signatures-in-aposymbiotic-Astrangia-poculata/blob/master/Astrangia_HotCold.pdf
-- Looking at "oxidoreductase, acting on a heme group of donors, oxygen as acceptor" [MF GO terms: GO:0004129;GO:0015002;GO:0016676;GO:0016675], "mitochondrial membrane part" [CC GO term: GO:0044455], and "mitochondrial part" [CC GO term: GO:0044429]
+- Looking at "mitochondrial membrane part" [CC GO term: GO:0044455], and "mitochondrial part" [CC GO term: GO:0044429]
 
 - Set up the variable iso2go which contains the ofav gene id and all of its associated GO terms
 
@@ -612,32 +613,6 @@ heatmap_mit = heatmap.2(as.matrix(mitochondria), Rowv = TRUE, Colv = FALSE, scal
 
 - Yellow to white correspond to upregulation and red corresponds to downregulation
 
-- Now doing the same for oxidoreductase
-- Oxidoreductase complex from CC (GO:1990204); oxidoreductase activity from MF (GO:0016491)
-- To filter for multiple terms, use | (the symbol that is shift back slash) and quotes only outside all the terms
-```{r,eval=FALSE}
-oxidoreductase = iso2go %>%
-  filter(str_detect(GO.terms, "GO:0004129|GO:0015002|GO:0016676|GO:0016675")) %>%
-  left_join(rlog_BD) %>%
-  left_join(gene) %>%
-  mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %>%
-  column_to_rownames(var = "gene_symbol") %>%
-  dplyr::select(-GO.terms, -description, -gene_ID) %>%
-  drop_na() %>%
-  dplyr::select(sort(current_vars()))
-head(oxidoreductase)
-nrow(oxidoreductase)
-```
-- 16 genes correspond to these four terms in rarefied data
-- Plot a heatmap of the differential expression of ALL the genes that correspond to the oxidoreductase GO terms above
-```{r,eval=FALSE}
-heatmap_oxidoreductase = heatmap.2(as.matrix(oxidoreductase), Rowv = TRUE, Colv = TRUE, scale = "row",
-                               dendrogram = "both",
-                               trace = "none",
-                               main = "GO Oxidoreductase",
-                               margin = c(5,15))
-```
-
 - Notice that in the above heatmaps, we clustered the columns (the samples) as well as the rows. When we clustered the columns in the oxidoreductase heatmap, B.2 clusters with the Ds. This may be an affect of the count values we obtained from each sample, as B.2 was the B sample with the high count values.
 - One way to mitigate this is to take the means of the rows, subtract the mean from the original value, and plot the result instead of the original value
 - We'll also be filtering for only those genes that are significantly differentially expressed between recruits hosting D vs B
@@ -684,32 +659,6 @@ heatmap_GO_mit_sig = heatmap.2(as.matrix(explc_mit), col = col0, Rowv = TRUE, Co
 ```
 
 - In this heatmap, I've used a new color palette. Now blue is downregulated and orange is upregulated
-
-- Now, search within rlog_BD_10 for all the sig DE genes that correspond to the oxidoreductase terms
-```{r,eval=FALSE}
-oxidoreductase_sig = iso2go %>%
-  filter(str_detect(GO.terms, "GO:0004129|GO:0015002|GO:0016676|GO:0016675")) %>%
-  left_join(rlog_BD_10) %>%
-  left_join(gene) %>%
-  mutate(gene_symbol = make.names(gene_symbol, unique = TRUE)) %>%
-  column_to_rownames(var = "gene_symbol") %>%
-  dplyr::select(-GO.terms, -description, -gene_ID) %>%
-  drop_na() %>%
-  dplyr::select(sort(current_vars()))
-oxidoreductase_sig
-```
-- We have 2 genes here, plot the difference from the mean on a heatmap
-```{r,eval=FALSE}
-oxidoreductase_means_sig = apply(oxidoreductase_sig, 1, mean)
-explc_oxr = oxidoreductase_sig-oxidoreductase_means_sig
-head(explc_oxr)
-
-heatmap_oxidoreductase_sig = heatmap.2(as.matrix(explc_oxr), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
-                                   dendrogram = "both",
-                                   trace = "none",
-                                   main = "GO Oxidoreductase",
-                                   margin = c(5,15))
-```
 
 - For the final step, I'm going to make a heatmap of all the genes that are differentially regulated (alpha = 0.05 and alpha = 0.01 to account for the count differences) that will allow for further exploration
 
