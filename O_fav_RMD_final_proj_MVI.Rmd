@@ -278,7 +278,7 @@ pheatmap(sampleDistMatrix,color = heat.colors,cex=0.9,border_color=NA,cluster_ro
 
 -----------------------------------------------
 
-## PCA Anlysis 
+## PCA Analysis 
 
 To perform the Principal Component Analysis (PCA) on the data will allow us to visualize overall effect of experimental covariates and batch effects. We first must transpose the data table hols the r log transformation data assay. 
 ```{r,eval=TRUE}
@@ -354,15 +354,13 @@ The number of genes that have an adjusted p-value less than 0.05 and that do not
 nrow(resD[resD$padj<0.05 & !is.na(resD$padj),]) 
 ```
 
-```{r, echo=FALSE, fig.cap="**Figure 9.** "}
+```{r, echo=FALSE, fig.cap="**Figure 9.** *Orbicella Faveolata* hosting Symbiodiniaceae strain B01 vs. *O. faveolata* hosting Symbiodiniaceae strain D  scatter plot of log fold changes (on the y-axis) versus the mean of normalized counts (on the x-axis) of the isogroups identified in the treatments samples. The non signicant data points are in gray, and significant data points are represented in blue. "}
 plotMA(resD, main="B vs D", ylim=c(-2,2))
 ```
-
 
 ```{r include=FALSE}
 results <- as.data.frame(resD)
 ```
-
 
 The number of upregulated and downregulated genes (respectively) that have an adjusted p-value less than 0.1 and that do not have NA values for the adjusted p-value, are counted and reported below.
 ```{r}
@@ -379,10 +377,8 @@ cd <- read.table("rare_D_2021.txt")
 
 ## GO table for MWU
 
-- Create a term go_input_D that has the -logpval as a neg number if the l2fc is < 0 and a pos number if the l2fc is > 0
-- This term will go into the go analysis
-```{r,eval=FALSE}
-cd
+Use the results from the DESeq analysis with the contrast as the temperature to generate a term called `go_input_D` that has the log p-value as a negative number if the log fold change is less than 0 and a positive number if the log fold change is greater than 0. The generated GO table for the specific isogroups in the samples will be used for the GO enrichment analysis later on.
+```{r,eval=TRUE}
 go_input_D = cd %>%
   tibble::rownames_to_column(var = "iso") %>%
   mutate(mutated_p = -log(pvalue)) %>%
@@ -391,35 +387,35 @@ go_input_D = cd %>%
   select(iso, mutated_p_updown)
 head(go_input_D)
 colnames(go_input_D) <- c("gene", "pval")
-head(go_input_D)
 write.csv(go_input_D, file="rare_D_GO.csv", quote=F, row.names=FALSE)
 ```
 
 ## GO analysis 
-ACTUAL DIFFERENTIAL GENE EXPRESSION ANALYSIS STARTS HERE
-- This is just the preliminary GO enrichment analysis of all the genes. The way gomwu works is that it performs rankings and gives you enrichment of GO terms in the ranked list. So GO terms that show up may not actually contain only genes that are significantly differentially expressed, that gene set is just enriched
+Here we will do a preliminary GO enrichment analysis of all the genes. A GOMWU performs rankings and gives the enrichment of GO terms in the ranked list. The GO terms that show up may not actually contain only genes that are significantly differentially expressed and it is just the gene set that is just enriched. 
 
-- Plotting genes within each GO category between B and D
+There are 3 sub-ontologies to plot dendograms of genes between coral hosting strain B and coral hosting strain D. 
+
 - MF: Molecular function
 - BP: Biological process
 - CC: Cellular component
 
-- Manipulated BD_DE.txt in excel following Sarah's verbal instructions and loaded it here
-- BD_DE_GO has the mutated -log(p-values) \
-- From the BI586_uptake file, we got log2 fold change (MLE): treat D vs B
-- Reminder: this means that pos log2FC values indicate D is upregulated compared to B; The name provided in the second element (B) is the baseline
-
-```{r,eval=FALSE}
+We read in the mutated log fold change p-values from the csv file and store it in the variable `BD_DE_GO`. Just a reminder that positive log fold changes are when genes are upregulated in strain D compared to strain B and a negative log fold change are when genes are downregulated in strain D compared to strain B. 
+```{r,eval=TRUE}
 BD_DE_GO = read.csv("rare_D_GO.csv")
 ```
-- Creating dendrograms (more info can be found in the r file GO_MWU.R)
-- First, run MF; edit the input stuff to match what you're running
-- BD_DE_GO.csv has two columns of comma-separated values: gene id, continuous measure of significance. To perform standard GO enrichment analysis based on Fisher's exact test, use binary measure (0 or 1, i.e., either significant or not).
-- orb_fav_iso2go.txt is two-column, tab-delimited, one line per gene, multiple GO terms separated by semicolon. If you have multiple lines per gene, use nrify_GOtable.pl prior to running this script.
-- go.obo is downloaded from http://www.geneontology.org/GO.downloads.ontology.shtml
-- goDivision is either MF, BP, or CC
 
-CONTROL REPLACE ofav to isogroup in rare_D_GO.CSV so they can be linked to the go annotations file
+Some notes before the dendograms are generated:
+
+- The BD_DE_GO.csv file has two columns of gene id and teh continuous measure of significance. To perform the stanadard GO enrichment analysiss based on Fisher's exact test, we use binary measure (0 or 1, i.e., either significant or not).
+- The orb_fav_iso2go.txt file is tab-delimited and has one line per gene. Multiple GO terms are listed and separated by semicolon. 
+- The *Orbicella faveolata* isogroup GO annotations are from Rachel Wright. 
+- The GO database was downloaded from [Gene Ontology](http://www.geneontology.org/GO.downloads.ontology.shtml) and here the go_basic.obo file is being used, but was renamed go.obo. 
+
+*NOTE: The rare_D_GO.csv has its column with 'ofav' instead of 'isogroup', so that was replaced prior to GO analysis, so they can be linked to the GO annotations file. *
+
+
+### MF 
+gomwuStats settings were specified with the largest so a GO category will not be considered it contains more than 0.1 of the total number of genes, the smallest is specified so that a GO catefory should contain a minimum of 5 genes to be considered, and the clusterCutHeight is the threshold for merging gene-sharing terms.
 ```{r,eval=FALSE}
 head(read.csv("rare_D_GO.csv"))
 input="rare_D_GO.csv"
@@ -427,35 +423,25 @@ goAnnotations="orb_fav_iso2go_new.tab"
 goDatabase="go.obo"
 goDivision="MF"
 source("gomwu.functions.R")
-```
 
-- Calculating stats. It might take ~3 min for MF and BP. Do not rerun it if you just want to replot the data with different cutoffs, go straight to gomwuPlot. If you change any of the numeric values below, delete the files that were generated in previous runs first.
-- perlPath: replace with full path to perl executable if it is not in your system's PATH already
-- largest: a GO category will not be considered if it contains more than this fraction of the total number of genes
-- smallest: a GO category should contain at least this many genes to be considered
-- clusterCutHeight: threshold for merginng similar (gene-sharing) terms. See gomwu README for details
-```{r,eval=FALSE}
 gomwuStats(input, goDatabase, goAnnotations, goDivision,
-           perlPath="perl",
+           perlPath="C:/Strawberry/perl/bin/perl.exe",
            largest=0.1,
            smallest=5,
            clusterCutHeight=0.25)
 ```
-- NEW TRANSCRIPTOME, rarefied counts: 5 GO terms at 10% FDR
 
+
+- NEW TRANSCRIPTOME, NEW rarified:  0 go terms at 10 % FDR
+
+
+- NEW TRANSCRIPTOME, rarefied counts: 5 GO terms at 10% FDR
 - Old transcriptome: Returned 9 GO terms at 10% FDR
 - New transcriptome non-rarefied: 18 GO terms at 10% FDR
-- Plot results in a dendrogram
-- absValue=-log(0.05,10); genes with the measure value exceeding this will be counted as "good genes". Specify absValue=0.001 if you are doing Fisher's exact test for standard GO enrichment or analyzing a WGCNA module (all non-zero genes = "good genes").
-- level1=0.1: FDR threshold for plotting. Specify level1=1 to plot all GO categories containing genes exceeding the absValue.
-- level2=0.05: FDR cutoff to print in regular (not italic) font.
-- level3=0.01: FDR cutoff to print in large bold font.
-- txtsize=1.5: decrease to fit more on one page, or increase (after rescaling the plot so the tree fits the text) for better "word cloud" effect
-- treeHeight=0.5: height of the hierarchical clustering tree
-- colors=c("dodgerblue2","firebrick1","skyblue","lightcoral") # these are default colors, un-remark and change if needed
-- Typing resultsMF gives you the data in a written format
+
+
+To plot the dendogram the settings were chosen as follows. The level1=0.1 is the FDR threshold for plotting where all GO categories are plotted containing genes exceeding the absValue.Level2=0.05 is the FDR cutoff to print in regular (not italic) font. Level3=0.01 is the FDR cutoff to print in large bold font. The text size and treeHeight are for the spacing and look of the actual dendogram.  
 ```{r, warning=FALSE, eval=FALSE}
-quartz()
 resultsMF=gomwuPlot(input,goAnnotations,goDivision,
                   absValue=1,
                   level1=0.1,
@@ -465,14 +451,14 @@ resultsMF=gomwuPlot(input,goAnnotations,goDivision,
                   treeHeight=0.5,
                   colors=c("dodgerblue2","firebrick1","skyblue","lightcoral")
 )
-resultsMF
 ```
 
-- Doesn't look that pretty, but if you really want it to look nice, run the above code in base R and then you can manipulate the size of the image to your liking, or export it as a pdf and fiddle around with the size
-- Red is upregulated in D and blue is downregulated in D (upregulated in B)
+Red is upregulated in coral hosting strain D and blue is downregulated in coral hosting strain D (or upregulated in coral hosting strain B).
+
 - The GO term we are most interested in here is Oxidoreductase, remember this for later
 
-- Now let's run the above protocol for BP
+### BP 
+gomwuStats settings were specified with the largest so a GO category will not be considered it contains more than 0.1 of the total number of genes, the smallest is specified so that a GO catefory should contain a minimum of 5 genes to be considered, and the clusterCutHeight is the threshold for merging gene-sharing terms.
 ```{r,eval=FALSE}
 head(read.csv("rare_D_GO.csv"))
 input="rare_D_GO.csv"
@@ -487,9 +473,13 @@ gomwuStats(input, goDatabase, goAnnotations, goDivision,
            smallest=5,
            clusterCutHeight=0.25)
 ```
+- NEW TRANSCRIPTOME, new rarefied: 2 GO terms at 10% FDR
+
+
 - NEW TRANSCRIPTOME, rarefied counts: 0 GO terms at 10% FDR
 - New transcriptome non-rarefied: 10 GO Terms at 10% FDR 
 
+To plot the dendogram the settings were chosen as follows. The level1=0.1 is the FDR threshold for plotting where all GO categories are plotted containing genes exceeding the absValue.Level2=0.05 is the FDR cutoff to print in regular (not italic) font. Level3=0.01 is the FDR cutoff to print in large bold font. The text size and treeHeight are for the spacing and look of the actual dendogram.
 ```{r, warning=FALSE, eval=FALSE}
 quartz()
 resultsBP=gomwuPlot(input,goAnnotations,goDivision,
@@ -503,10 +493,14 @@ resultsBP=gomwuPlot(input,goAnnotations,goDivision,
 resultsBP
 ```
 
+Red is upregulated in coral hosting strain D and blue is downregulated in coral hosting strain D (or upregulated in coral hosting strain B).
+
+
 - Old transcriptome: Returned 6 GO terms at 10% FDR
 - Here we are interested in the positive regulation of cell proliferation
 
-- Now let's run it for CC
+### CC 
+gomwuStats settings were specified with the largest so a GO category will not be considered it contains more than 0.1 of the total number of genes, the smallest is specified so that a GO catefory should contain a minimum of 5 genes to be considered, and the clusterCutHeight is the threshold for merging gene-sharing terms.
 ```{r,eval=FALSE}
 head(read.csv("rare_D_GO.csv"))
 input="rare_D_GO.csv"
@@ -521,10 +515,14 @@ gomwuStats(input, goDatabase, goAnnotations, goDivision,
            smallest=5,
            clusterCutHeight=0.25)
 ```
+
+- NEW TRANSCRIPTOME, new rarefied: 11 GO terms at 10% FDR
+
+
 - NEW TRANSCRIPTOME, rarefied: 5 GO terms at 10% FDR
 - New transcriptome non-rarefied: 23  GO terms at 10% FDR
 
-
+To plot the dendogram the settings were chosen as follows. The level1=0.1 is the FDR threshold for plotting where all GO categories are plotted containing genes exceeding the absValue.Level2=0.05 is the FDR cutoff to print in regular (not italic) font. Level3=0.01 is the FDR cutoff to print in large bold font. The text size and treeHeight are for the spacing and look of the actual dendogram.
 ```{r, warning=FALSE, eval=FALSE}
 quartz()
 resultsCC=gomwuPlot(input,goAnnotations,goDivision,
@@ -537,12 +535,9 @@ resultsCC=gomwuPlot(input,goAnnotations,goDivision,
 )
 resultsCC
 ```
+Red is upregulated in coral hosting strain D and blue is downregulated in coral hosting strain D (or upregulated in coral hosting strain B).
 
-- Old transcriptome: Returned 18 GO terms of interest
-- Interested in the mitochondrial complexes
-
-
-
+## Investigating DEGs in specific GO categories
 INVESTIGATING DIFFERENTIAL EXPRESSION OF GENES IN SPECIFIC GO CATEGORIES
 - Using Dan Wuitchik's code: https://github.com/wuitchik/Divergent-thermal-challenges-elicit-convergent-stress-signatures-in-aposymbiotic-Astrangia-poculata/blob/master/Astrangia_HotCold.pdf
 - Looking at "oxidoreductase, acting on a heme group of donors, oxygen as acceptor" [MF GO terms: GO:0004129;GO:0015002;GO:0016676;GO:0016675], "mitochondrial membrane part" [CC GO term: GO:0044455], and "mitochondrial part" [CC GO term: GO:0044429]
