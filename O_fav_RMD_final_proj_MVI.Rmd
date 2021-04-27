@@ -244,40 +244,6 @@ write.csv(rldpvals, "rare_BI586_uptake_RLDandPVALS.csv", quote=F)
 rldpvals <- read.csv(file="rare_BI586_uptake_RLDandPVALS.csv", row.names=1)
 ```
 
----------------------------------------------------------
-
-- Now we will create a heatmap of sample distances based on pvalues
-- Make a new variable for your csv file
-Read in the 
-
-- Make rld that a variable that just returns the first six columns with values (rownames then columns 1-6)
-```{r, eval=FALSE}
-rld=rldpvals[,1:6]
-head(rld)
-```
-- dist computes and returns the distance matrix computed using the specified distance measure to compute distances between the rows of a data matrix (rld); determine the overall differences in expression between each sample based on the rlog values
-- Turn the distances into a matrix
-```{r,eval=FALSE}
-sampleDists <- dist(t(rld))
-sampleDistMatrix <- as.matrix(sampleDists)
-```
-- Create a vector of treatment titles for the matrix and apply them to the rows and columns
-```{r, eval=FALSE}
-treat=c("B", "B", "B", "D", "D", "D")
-colnames(sampleDistMatrix)=paste(treat)
-rownames(sampleDistMatrix)=paste(treat)
-```
-
-```{r results="hide", eval=FALSE}
-heat.colors = colorRampPalette(rev(c("blue","yellow")),bias=0.3)(100)
-```
-- Apply your matrix of overall expression distance to a heatmap
-```{r, echo=FALSE, fig.cap="Figure 7. Sample Distance Matrix between B and D.", eval=FALSE}
-pheatmap(sampleDistMatrix,color = heat.colors,cex=0.9,border_color=NA,cluster_rows=T,cluster_cols=T)
-```
-
------------------------------------------------
-
 ## PCA Analysis 
 
 To perform the Principal Component Analysis (PCA) on the data will allow us to visualize overall effect of experimental covariates and batch effects. We first must transpose the data table hols the r log transformation data assay. 
@@ -386,7 +352,7 @@ go_input_D = cd %>%
   mutate(mutated_p_updown = ifelse(log2FoldChange < 0, mutated_p*-1, mutated_p*1)) %>%
   na.omit() %>%
   select(gene, mutated_p_updown)
-head(go_input_D)
+
 colnames(go_input_D) <- c("gene", "pval")
 
 write.csv(go_input_D, file="rare_D_GO.csv", quote=F, row.names=FALSE)
@@ -408,15 +374,15 @@ BD_DE_GO = read.csv("rare_D_GO.csv")
 
 Some notes before the dendograms are generated:
 
-- The BD_DE_GO.csv file has two columns of gene id and teh continuous measure of significance. To perform the stanadard GO enrichment analysiss based on Fisher's exact test, we use binary measure (0 or 1, i.e., either significant or not).
+- The BD_DE_GO.csv file has two columns of gene id and teh continuous measure of significance. To perform the standard GO enrichment analysis based on Fisher's exact test, we use binary measure (0 or 1, i.e., either significant or not).
 - The orb_fav_iso2go.txt file is tab-delimited and has one line per gene. Multiple GO terms are listed and separated by semicolon. 
 - The *Orbicella faveolata* isogroup GO annotations are from Rachel Wright. 
 - The GO database was downloaded from [Gene Ontology](http://www.geneontology.org/GO.downloads.ontology.shtml) and here the go_basic.obo file is being used, but was renamed go.obo. 
 
-### MF 
-gomwuStats settings were specified with the largest so a GO category will not be considered it contains more than 0.1 of the total number of genes, the smallest is specified so that a GO catefory should contain a minimum of 5 genes to be considered, and the clusterCutHeight is the threshold for merging gene-sharing terms.
-```{r,eval=FALSE}
-head(read.csv("rare_D_GO.csv"))
+### MF (Molecular Function)
+gomwuStats settings were specified with the largest so a GO category will not be considered if it contains more than 0.1 of the total number of genes, the smallest is specified so that a GO category should contain a minimum of 5 genes to be considered, and the clusterCutHeight is the threshold for merging gene-sharing terms.
+```{r,eval=TRUE}
+#head(read.csv("rare_D_GO.csv"))
 input="rare_D_GO.csv"
 goAnnotations="orb_fav_iso2go_new.tab"
 goDatabase="go.obo"
@@ -430,35 +396,11 @@ gomwuStats(input, goDatabase, goAnnotations, goDivision_1,
 ```
 
 
-- NEW TRANSCRIPTOME, NEW rarified:  0 go terms at 10 % FDR
+As we can see, this new rarefied data against this transcriptome results in 0 GO terms at 10% FDR for the Molecular Function sub-ontology. Due to this, there is no dendogram to be generated. 
 
-
-- NEW TRANSCRIPTOME, rarefied counts: 5 GO terms at 10% FDR
-- Old transcriptome: Returned 9 GO terms at 10% FDR
-- New transcriptome non-rarefied: 18 GO terms at 10% FDR
-
-
-To plot the dendogram the settings were chosen as follows. The level1=0.1 is the FDR threshold for plotting where all GO categories are plotted containing genes exceeding the absValue.Level2=0.05 is the FDR cutoff to print in regular (not italic) font. Level3=0.01 is the FDR cutoff to print in large bold font. The text size and treeHeight are for the spacing and look of the actual dendogram.  
-```{r, warning=FALSE, eval=FALSE}
-resultsMF=gomwuPlot(input,goAnnotations,goDivision_1,
-                  absValue=1,
-                  level1=0.1,
-                  level2=0.05,
-                  level3=0.01,
-                  txtsize=1.5,
-                  treeHeight=0.5,
-                  colors=c("dodgerblue2","firebrick1","skyblue","lightcoral")
-)
-```
-
-Red is upregulated in coral hosting strain D and blue is downregulated in coral hosting strain D (or upregulated in coral hosting strain B).
-
-- The GO term we are most interested in here is Oxidoreductase, remember this for later
-
-### BP 
-gomwuStats settings were specified with the largest so a GO category will not be considered it contains more than 0.1 of the total number of genes, the smallest is specified so that a GO catefory should contain a minimum of 5 genes to be considered, and the clusterCutHeight is the threshold for merging gene-sharing terms.
-```{r,eval=FALSE}
-head(read.csv("rare_D_GO.csv"))
+### BP (Biological Process)
+gomwuStats settings were specified with the largest so a GO category will not be considered if it contains more than 0.1 of the total number of genes, the smallest is specified so that a GO category should contain a minimum of 5 genes to be considered, and the clusterCutHeight is the threshold for merging gene-sharing terms. 
+```{r,eval=TRUE}
 input="rare_D_GO.csv"
 goAnnotations="orb_fav_iso2go_new.tab"
 goDatabase="go.obo"
@@ -471,15 +413,11 @@ gomwuStats(input, goDatabase, goAnnotations, goDivision_2,
            smallest=5,
            clusterCutHeight=0.25)
 ```
-- NEW TRANSCRIPTOME, new rarefied: 2 GO terms at 10% FDR
 
-
-- NEW TRANSCRIPTOME, rarefied counts: 0 GO terms at 10% FDR
-- New transcriptome non-rarefied: 10 GO Terms at 10% FDR 
+As we can see, this new rarefied data against this transcriptome results in 2 GO terms at 10% FDR for the Molecular Function sub-ontology. Since there are some GO terms, we can now create a dendogram. 
 
 To plot the dendrogram the settings were chosen as follows. The level1=0.1 is the FDR threshold for plotting where all GO categories are plotted containing genes exceeding the absValue.Level2=0.05 is the FDR cutoff to print in regular (not italic) font. Level3=0.01 is the FDR cutoff to print in large bold font. The text size and treeHeight are for the spacing and look of the actual dendrogram.
-```{r, warning=FALSE, eval=FALSE}
-quartz()
+```{r, echo = FALSE, message=FALSE, warning=FALSE, eval=TRUE, fig.height=2, fig.cap="**Figure 10.**GO MWU plot with level 1 at 0.1, level 2 at 0.05, and level 3 at 0.01. The biological processes (BP) sub-ontology was used for this analysis. Blue represents GO terms that were downregulated in *Orbicella faveolata* hosting Symbiodiniaceae strain D compared to *O.faveolata*hosting Symbiodiniaceae strain B01."}
 resultsBP=gomwuPlot(input,goAnnotations,goDivision_2,
                   absValue=1,
                   level1=0.1,
@@ -487,20 +425,15 @@ resultsBP=gomwuPlot(input,goAnnotations,goDivision_2,
                   level3=0.01,
                   txtsize=1.5,
                   treeHeight=0.5,
+                  colors=c("dodgerblue2","firebrick1","skyblue","lightcoral")
 )
-resultsBP
 ```
 
-Red is upregulated in coral hosting strain D and blue is downregulated in coral hosting strain D (or upregulated in coral hosting strain B).
+In general, red is upregulated in coral hosting strain D and blue is downregulated in coral hosting strain D (or upregulated in coral hosting strain B). However, both GO terms here were downregulated in coral hosting strain D compared to the baseline of coral hosting strain B. 
 
-
-- Old transcriptome: Returned 6 GO terms at 10% FDR
-- Here we are interested in the positive regulation of cell proliferation
-
-### CC 
-gomwuStats settings were specified with the largest so a GO category will not be considered it contains more than 0.1 of the total number of genes, the smallest is specified so that a GO catefory should contain a minimum of 5 genes to be considered, and the clusterCutHeight is the threshold for merging gene-sharing terms.
-```{r,eval=FALSE}
-head(read.csv("rare_D_GO.csv"))
+### CC (Cellular Components)
+gomwuStats settings were specified with the largest so a GO category will not be considered if it contains more than 0.1 of the total number of genes, the smallest is specified so that a GO category should contain a minimum of 5 genes to be considered, and the clusterCutHeight is the threshold for merging gene-sharing terms.
+```{r,eval=TRUE}
 input="rare_D_GO.csv"
 goAnnotations="orb_fav_iso2go_new.tab"
 goDatabase="go.obo"
@@ -514,15 +447,11 @@ gomwuStats(input, goDatabase, goAnnotations, goDivision_3,
            clusterCutHeight=0.25)
 ```
 
-- NEW TRANSCRIPTOME, new rarefied: 11 GO terms at 10% FDR
-
-
-- NEW TRANSCRIPTOME, rarefied: 5 GO terms at 10% FDR
-- New transcriptome non-rarefied: 23  GO terms at 10% FDR
+As we can see, this new rarefied data against this transcriptome results in 11 GO terms at 10% FDR for the Molecular Function sub-ontology. Since there are some GO terms, we can now create a dendogram. 
 
 To plot the dendogram the settings were chosen as follows. The level1=0.1 is the FDR threshold for plotting where all GO categories are plotted containing genes exceeding the absValue.Level2=0.05 is the FDR cutoff to print in regular (not italic) font. Level3=0.01 is the FDR cutoff to print in large bold font. The text size and treeHeight are for the spacing and look of the actual dendogram.
-```{r, warning=FALSE, eval=FALSE}
-quartz()
+
+```{r, echo=FALSE, warning=FALSE, eval=TRUE, fig.height=4, fig.cap="**Figure 11.** GO MWU plot with level 1 at 0.1, level 2 at 0.05, and level 3 at 0.01. The cellular components (CC) sub-ontology was used for this analysis. Red represents GO terms that were upregulated in *Orbicella faveolata* hosting Symbiodiniaceae strain D compared to *O.faveolata* hosting Symbiodiniaceae strain B01 and blue represents GO terms that were downregulated in *O.faveolata* hosting strain D compared to *O.faveolata* hosting strain B01. "}
 resultsCC=gomwuPlot(input,goAnnotations,goDivision_3,
                   absValue=1,
                   level1=0.1,
@@ -531,26 +460,24 @@ resultsCC=gomwuPlot(input,goAnnotations,goDivision_3,
                   txtsize=1.5,
                   treeHeight=0.5,
 )
-resultsCC
 ```
-Red is upregulated in coral hosting strain D and blue is downregulated in coral hosting strain D (or upregulated in coral hosting strain B).
+
+Red is upregulated in coral hosting strain D and blue is downregulated in coral hosting strain D (or upregulated in coral hosting strain B). Here we see some terms can be considered cellular structure elements that were downregulated in coral hosting strain D where the baseline is coral hosting strain B. However, in this case there are some mitochondrial terms that were upregulated in coral hosting strain D compared to those hosting strain B. 
 
 ## Investigating DEGs in specific GO categories
-INVESTIGATING DIFFERENTIAL EXPRESSION OF GENES IN SPECIFIC GO CATEGORIES
-- Using Dan Wuitchik's code: https://github.com/wuitchik/Divergent-thermal-challenges-elicit-convergent-stress-signatures-in-aposymbiotic-Astrangia-poculata/blob/master/Astrangia_HotCold.pdf
-- Looking at "mitochondrial membrane part" [CC GO term: GO:0044455], and "mitochondrial part" [CC GO term: GO:0044429]
+Code in this section was adapted from [Dan Wuitchik]( https://github.com/wuitchik/Divergent-thermal-challenges-elicit-convergent-stress-signatures-in-aposymbiotic-Astrangia-poculata/blob/master/Astrangia_HotCold.pdf)
 
-- Set up the variable iso2go which contains the ofav gene id and all of its associated GO terms
+Based on the original GO analysis in the CC sub ontology, there was evidence that mitochondrial related elements were upregulated in coral hosting strain D compared to coral hosting strain B. To further analyze this data, the "mitochondrial membrane part" [CC GO term: GO:0044455], and "mitochondrial part" [CC GO term: GO:0044429] were focused on. 
 
-
-```{r, eval=FALSE}
+`iso2go` was set up with the ofav gene id and all of its associated GO terms after being read in. 
+```{r, eval=TRUE}
 iso2go = read.table("orb_fav_iso2go_new.tab", sep="\t")
-head(iso2go)
 colnames(iso2go) <- c("gene_ID", "GO.terms")
 ```
-- Obtain the gene symbol from the gene descriptions in the file orb_fav_iso2gene.tab
-- Create the variable gene which contains the gene id, the full description, and the gene symbol
-```{r,eval = FALSE}
+
+
+A character vector of gene ID and description is made and the `iso2gene` is read in. The character vector is assigned to be the column names of the iso2gene data frame. Then the gene symbol is obtained from the descriptions that are in the file and the variable `gene` now contains the gene ID, full description and the gene symbol 
+```{r,eval = TRUE}
 newnames = c("gene_ID", "description" )
 iso2gene = read.table("orb_fav_iso2gene_new.tab", sep="\t")
 colnames(iso2gene) <- newnames
@@ -558,29 +485,25 @@ colnames(iso2gene) <- newnames
 gene = iso2gene %>%
        mutate(gene_symbol = gsub(".* GN=", "", description)) %>%
        mutate(gene_symbol = gsub(" .*", "", gene_symbol))
-head(gene)
 ```
-- To get the rlog foldchange values, I'm going to manipulate the BI586 uptake file (which I will save in a variable called BD_DE)
-```{r,eval=FALSE}
-head(read.csv("rare_BI586_uptake_RLDandPVALS.csv"))
+
+
+### All DEG - Mitochondria
+The r-log fold change values and p-values from prior are read in and stored in a variable called `BD_DE`. It is important to note that in this file the gene IDs are listed with ofav instead of isogroup. It is important to change this so that they can be linked in future steps when creating the heatmaps. The `rlog_BD` now contains the isoform names that are in the gene_ID column as well as the log fold change for each of the samples. By selecting for only the first 7 columns, the adjusted p-values and p-values are dropped and only the r log data remains in the variable. 
+```{r,eval=TRUE}
 BD_DE = read.csv("rare_BI586_uptake_RLDandPVALS.csv")
 BD_DE = BD_DE %>%
   mutate(gene_ID = gsub("ofav*", "isogroup", X)) %>%
   select(-X) %>%
   relocate(gene_ID, .before=B) 
-head(BD_DE)
 rlog_BD = BD_DE[,1:7]
-head(rlog_BD)
 ```
-- rlog_BD just has the isoform names (called gene_ID) and the log2FC for each sample
-- could have also used the tidyverse select function instead of [,1:7] here, Dan says it's better to keep the same format so using select would have been better
 
-- Next, make a variable that contains all the genes that correspond to the GO terms of interest. In this case we will be looking at the genes that correspond to the parent GO terms of Mitochondrial Membrane Part (GO:0044455) and Mitochondrial Part (GO:0044429) in CC
-```{r, warning=FALSE, eval=FALSE}
+
+The GO csv is read in and the column names are renamed as needed to confirm that they match the case of the column names in the other files. Then a variable containing all the genes that correspond to the GO terms of interest is created. The genes that are selected for and correspond to the parent GO terms are as follows: Mitochondrial Membrane Part (GO:0044455) and Mitochondrial Part (GO:0044429) in CC sub-ontology. Any genes with NA are dropped from the selection and data is stored in the `mitochondria` variable. 
+```{r, warning=FALSE, message=FALSE, eval=TRUE}
 cc = read.csv("CC_rare_D_GO.csv", sep="\t")
-head(cc)
 colnames(cc)[4]="gene_ID"
-head(cc)
 mitochondria = cc %>%
   filter(str_detect(term, "GO:0044455|GO:0044429")) %>%
   left_join(rlog_BD) %>%
@@ -592,44 +515,35 @@ mitochondria = cc %>%
   dplyr::select(sort(current_vars()))
 ```
 
-```{r, eval=FALSE}
-head(mitochondria)
+
+The number of genes that correspond to the parent GO terms is counted and reported below. 
+```{r, eval=TRUE}
 nrow(mitochondria)
 ```
 
-- 55 terms correspond to these parent GO terms for mitochondrial function
-- Plot a heatmap of the differential expression of ALL the genes that correspond to mitochondrial membrane function
-- Then calculate the mean and plot that
-```{r,eval=FALSE}
+A total of 55 terms are reported to correspond with the parent GO terms for mitochondrial function and a heatmap is plotted. 
+```{r, echo=FALSE, warning=FALSE, message=FALSE, eval=TRUE, fig.height=10, fig.cap="**Figure 12.** A heatmap of the differential gene expression of all genes that correspond to mitochondrial membrane function. Yellow/white represents genes that were upregulated in *Orbicella faveolata* hosting Symbiodiniaceae strain D compared to *O.faveolata* hosting Symbiodiniaceae strain B01 and red represents genes that were downregulated in *O.faveolata* hosting strain D compared to *O.faveolata* hosting strain B01."}
 heatmap_mit = heatmap.2(as.matrix(mitochondria), Rowv = TRUE, Colv = FALSE, scale = "row",
           dendrogram = "both",
           trace = "none",
           main = "GO Mitochondria",
           margin = c(5,15))
-
-
 ```
 
-- Yellow to white correspond to upregulation and red corresponds to downregulation
 
-- Notice that in the above heatmaps, we clustered the columns (the samples) as well as the rows. When we clustered the columns in the oxidoreductase heatmap, B.2 clusters with the Ds. This may be an affect of the count values we obtained from each sample, as B.2 was the B sample with the high count values.
-- One way to mitigate this is to take the means of the rows, subtract the mean from the original value, and plot the result instead of the original value
-- We'll also be filtering for only those genes that are significantly differentially expressed between recruits hosting D vs B
-
-- Now we want to make new heatmaps of just those genes in cell prolif and oxidoreductase that are significantly differentially expressed (we will use an alpha of 0.1)
-
-- Filter the BI586 uptake data for all genes significantly differentially expressed (alpha = 0.1 for this section, we will use the more stringent 0.05 later)
-```{r,eval=FALSE}
+### Significant (p-value < 0.1) DEG - Mitochondria
+The uptake data is filtered for only those genes that were significantly differentially expressed (alpha=0.1). The `rlog_BD_10` now contains the isoform names that are in the gene_ID column as well as the log fold change for each of the samples. By selecting for only the first 7 columns, the adjusted p-values and p-values are dropped and only the r log data remains in the variable. The number of significantly expressed genes are counted and reported below. 
+```{r,eval=TRUE}
 BD_DE_10 = filter(BD_DE, pval.BD <= 0.1, preserve = TRUE)
-head(BD_DE_10) 
 rlog_BD_10 = BD_DE_10[,1:7]
-head(rlog_BD_10)
 nrow(rlog_BD_10)
 ```
-- rlog_BD_10 has all the genes that are sig DE with alpha=0.1 and does not contain the p-val nor the adj p-val (562 genes in rarefied data)
 
-- Now search within this list for all genes that correspond to the GO terms mitochondrial membrane function and call this GO_mit_sig
-```{r,eval=FALSE}
+We see that this is a total of 562 genes in this rarefied data for significantly differentially expressed genes where the alpha = 0.1. 
+
+
+Now that the list has been filtered to only significantly differentially expressed genes, all genes that correspond to the GO terms of mitochondrial membrane function can be selected for and stored in `GO_mit_sig`. The number of significantly differentially expressed genes that are associated with the mitochondrial membrane function terms are counted and reported below. 
+```{r,eval=TRUE, message=FALSE, warning=FALSE}
 GO_mit_sig = cc %>%
   filter(str_detect(term, "GO:0044455|GO:0044429")) %>%
   left_join(rlog_BD_10) %>%
@@ -639,15 +553,18 @@ GO_mit_sig = cc %>%
   dplyr::select(-name, -term, -lev, -value, -description, -gene_ID) %>%
   drop_na() %>%
   dplyr::select(sort(current_vars()))
-GO_mit_sig
 nrow(GO_mit_sig)
-
 ```
-- We have 5 genes, plot them in a heatmap but this time use the calculated difference from the mean
-```{r,eval=FALSE}
+
+
+There are 5 such genes and the calculated differences from the means are plotted in a heatmap. 
+```{r,eval=TRUE}
 GO_mit_means_sig = apply(GO_mit_sig, 1, mean)
 explc_mit = GO_mit_sig-GO_mit_means_sig
-head(explc_mit)
+```
+
+
+```{r, echo=FALSE, fig.height=5, fig.cap="**Figure 13.** A heatmap of the significantly differntially expressed genes (alpha = 0.1) that correspond to mitochondrial membrane GO terms generated from the calculated differences from the means. Orange represents genes that were upregulated in *Orbicella faveolata* hosting Symbiodiniaceae strain D compared to *O.faveolata* hosting Symbiodiniaceae strain B01 and blue represents genes that were downregulated in *O.faveolata* hosting strain D compared to *O.faveolata* hosting strain B01."}
 col0=colorRampPalette(rev(c("chocolate1","#FEE090","grey10", "cyan3","cyan")))(100)
 heatmap_GO_mit_sig = heatmap.2(as.matrix(explc_mit), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
                                dendrogram = "both",
@@ -656,36 +573,32 @@ heatmap_GO_mit_sig = heatmap.2(as.matrix(explc_mit), col = col0, Rowv = TRUE, Co
                                margin = c(5,15))
 ```
 
-- In this heatmap, I've used a new color palette. Now blue is downregulated and orange is upregulated
 
-- For the final step, I'm going to make a heatmap of all the genes that are differentially regulated (alpha = 0.05 and alpha = 0.01 to account for the count differences) that will allow for further exploration
-
-```{r,eval=FALSE}
+### Filter data for different alpha levels
+The uptake data is filtered for only those genes that were significantly differentially expressed with stricter bounds for p-values (alpha=0.05 and alpha=0.01) as well as adjusted p-values (alpha = 0.1) to account for the count differences. The `rlog_BD_05`, `rlog_BD_01`, `rlog_BD_adj` now contain the isoform names that are in the gene_ID column as well as the log fold change for each of the samples. By selecting for only the first 7 columns, the adjusted p-values and p-values are dropped and only the r log data remains in the variable. The number of significantly expressed genes are counted and reported below. 
+```{r,eval=TRUE}
 BD_DE_05 = filter(BD_DE, pval.BD <= 0.05, preserve = TRUE)
-head(BD_DE_05) 
 rlog_BD_05 = BD_DE_05[,1:7]
-head(rlog_BD_05)
 nrow(rlog_BD_05)
 
 BD_DE_01 = filter(BD_DE, pval.BD <= 0.01, preserve = TRUE)
-head(BD_DE_01) 
 rlog_BD_01 = BD_DE_01[,1:7]
-head(rlog_BD_01)
 nrow(rlog_BD_01)
-```
-- alpha of 0.05 yields 279 terms
-- alpha of 0.01 yields 68 terms
-- Let's also try padj alpha of 0.1:
-```{r, eval=FALSE}
+
 BD_DE_adj = filter(BD_DE, padj.BD <= 0.1, preserve = TRUE)
-head(BD_DE_adj) 
 rlog_BD_adj = BD_DE_adj[,1:7]
-head(rlog_BD_adj)
 nrow(rlog_BD_adj)
 ```
-- padj yields 30 terms which is pretty manageable
 
-```{r,eval=FALSE}
+- We see that this is a total of 279 genes in this rarefied data for significantly differentially expressed genes where the alpha = 0.05 for the p-value. 
+
+- We see that this is a total of 68 genes in this rarefied data for significantly differentially expressed genes where the alpha = 0.01 for the p-value. 
+
+- We see that this is a total of 30 genes in this rarefied data for significantly differentially expressed genes where the alpha = 0.1 for the *adjusted* p-value. 
+
+### Significant (adjusted p-value < 0.1) DEG - Mitochondria
+Now that the list has been filtered to only significantly differentially expressed genes with an adjusted p-value at alpha = 0.1, all genes that correspond to the GO terms of mitochondrial membrane function can be selected for and stored in `sigDEG_BD_adj`. The number of significantly differentially expressed genes that are associated with the mitochondrial membrane function terms are counted and reported below. 
+```{r,warning=FALSE, message=FALSE, eval=TRUE}
 sigDEG_BD_adj = iso2go %>%
   left_join(rlog_BD_adj) %>%
   left_join(gene) %>%
@@ -694,9 +607,39 @@ sigDEG_BD_adj = iso2go %>%
   dplyr::select(-GO.terms, -description, -gene_ID) %>%
   drop_na() %>%
   dplyr::select(sort(current_vars()))
-head(sigDEG_BD_adj)
 nrow(sigDEG_BD_adj)
+```
 
+Here there are only 18 of the 30 DEGs that had annotated GO terms. So a heatmap with these raw values can be generated. 
+
+```{r,eval=TRUE, echo=FALSE,fig.width=9, fig.cap="**Figure 14.** A heatmap of the significantly differntially expressed genes (adjusted p-value where alpha = 0.1) that correspond to mitochondrial membrane GO terms. Orange represents genes that were upregulated in *Orbicella faveolata* hosting Symbiodiniaceae strain D compared to *O.faveolata* hosting Symbiodiniaceae strain B01 and blue represents genes that were downregulated in *O.faveolata* hosting strain D compared to *O.faveolata* hosting strain B01 "}
+heatmap_sigDEG_adj = heatmap.2(as.matrix(sigDEG_BD_adj), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
+                           dendrogram = "both",
+                           trace = "none",
+                           main = "Significant DEG, padj < 0.1",
+                           margin = c(5,15))
+```
+
+
+Noting that many of the terms are un-annotated, a heatmap can be generated by calculating the difference from the means of the adjusted p-values of the differentially expressed genes. 
+```{r,eval=TRUE}
+sigDEG_BD_means_adj = apply(sigDEG_BD_adj, 1, mean)
+explc_sig_adj = sigDEG_BD_adj-sigDEG_BD_means_adj
+```
+
+```{r, echo=FALSE, fig.width=9,fig.cap="**Figure 15.** A heatmap of the significantly differntially expressed genes (adjusted p-value where alpha = 0.1) that correspond to mitochondrial membrane GO terms generated from the calculated differences from the means. Orange represents genes that were upregulated in *Orbicella faveolata* hosting Symbiodiniaceae strain D compared to *O.faveolata* hosting Symbiodiniaceae strain B01 and blue represents genes that were downregulated in *O.faveolata* hosting strain D compared to *O.faveolata* hosting strain B01."}
+heatmap_sigDEG_means_adj = heatmap.2(as.matrix(explc_sig_adj), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
+                           dendrogram = "both",
+                           trace = "none",
+                           main = "Significant DEG Mean, padj < 0.1",
+                           margin = c(5,15))
+```
+
+
+### Significant (p-value < 0.01) DEG - Mitochondria
+
+Now that the list has been filtered to only significantly differentially expressed genes with a p-value at alpha = 0.01, all genes that correspond to the GO terms of mitochondrial membrane function can be selected for and stored in `sigDEG_BD_01`. The number of significantly differentially expressed genes that are associated with the mitochondrial membrane function terms are counted and reported below. 
+```{r, warning=FALSE, message=FALSE}
 sigDEG_BD_01 = iso2go %>%
   left_join(rlog_BD_01) %>%
   left_join(gene) %>%
@@ -705,57 +648,38 @@ sigDEG_BD_01 = iso2go %>%
   dplyr::select(-GO.terms, -description, -gene_ID) %>%
   drop_na() %>%
   dplyr::select(sort(current_vars()))
-head(sigDEG_BD_01)
 nrow(sigDEG_BD_01)
 ```
-- sigDEG_BD_adj are all my significant DEGs between B and D in the right format with padj of 0.1
-- Only 18 out of the 30 DEGs had annotated GO terms
-- sigDEG_BD_01 are all my significant DEGs between B and D in the right format with pval of 0.01
-- Only 41 out of the 68 DEGs had annotated GO terms
-- First making a heatmap of the raw values for the adj
-```{r,eval=FALSE}
-heatmap_sigDEG_adj = heatmap.2(as.matrix(sigDEG_BD_adj), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
-                           dendrogram = "both",
-                           trace = "none",
-                           main = "Significant DEG, padj < 0.1",
-                           margin = c(5,15))
-```
-- A lot of the terms are un-annotated
-- Now calculating the difference from the mean of the padj DEGs and making that a heatmap
-```{r,eval=FALSE}
-sigDEG_BD_means_adj = apply(sigDEG_BD_adj, 1, mean)
-explc_sig_adj = sigDEG_BD_adj-sigDEG_BD_means_adj
-heatmap_sigDEG_means_adj = heatmap.2(as.matrix(explc_sig_adj), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
-                           dendrogram = "both",
-                           trace = "none",
-                           main = "Significant DEG Mean, padj < 0.1",
-                           margin = c(5,15))
-```
-- Do the same with the pval of 0.01
-```{r, eval=FALSE}
+
+Here there are only 41 of the 68 DEGs that had annotated GO terms. So a heatmap with these raw values can be generated. 
+
+```{r, echo=FALSE, fig.width=9, fig.height=10, fig.cap="**Figure 16.** A heatmap of the significantly differntially expressed genes (p-value where alpha = 0.01) that correspond to mitochondrial membrane GO terms. Orange represents genes that were upregulated in *Orbicella faveolata* hosting Symbiodiniaceae strain D compared to *O.faveolata* hosting Symbiodiniaceae strain B01 and blue represents genes that were downregulated in *O.faveolata* hosting strain D compared to *O.faveolata* hosting strain B01 "}
 heatmap_sigDEG_01 = heatmap.2(as.matrix(sigDEG_BD_01), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
                            dendrogram = "both",
                            trace = "none",
                            main = "Significant DEG, pval < 0.01",
                            margin = c(5,15))
+```
 
+Noting that many of the terms are un-annotated, a heatmap can be generated by calculating the difference from the means of the adjusted p-values of the differentially expressed genes. 
+
+```{r}
 sigDEG_BD_means_01 = apply(sigDEG_BD_01, 1, mean)
 explc_sig_01 = sigDEG_BD_01-sigDEG_BD_means_01
+```
+
+```{r, echo=FALSE, fig.width=9, fig.height=10, fig.cap="**Figure 17**. A heatmap of the significantly differntially expressed genes (p-value where alpha = 0.01) that correspond to mitochondrial membrane GO terms generated from the calculated differences from the means. Orange represents genes that were upregulated in *Orbicella faveolata* hosting Symbiodiniaceae strain D compared to *O.faveolata* hosting Symbiodiniaceae strain B01 and blue represents genes that were downregulated in *O.faveolata* hosting strain D compared to *O.faveolata* hosting strain B01." }
 heatmap_sigDEG_means_01 = heatmap.2(as.matrix(explc_sig_01), col = col0, Rowv = TRUE, Colv = TRUE, scale = "row",
                            dendrogram = "both",
                            trace = "none",
                            main = "Significant DEG Mean, pval < 0.01",
                            margin = c(5,15))
 ```
-- CYP3A28 is an Cytochrome P450, some genes for cytochrome P450 are NF-kB response genes; weakly downreg here
-- As is pla2g4a (phospholipase)
-- As is HSP110.1, not an NNF-kB response gene but is involved in thermal stress response
-- As is the phosphodiesterase pde9a.2
-- Cathepsin.1 is strongly upregulated in D; Cathepsin B and L are NF-kB response genes
 
-- Make this list of genes and expression values into a csv file for future reference
-- Also attach the jpg image of the heatmap so that all the gene symbols are visible
-```{r, eval=FALSE}
+
+```{r, echo=FALSE, eval=FALSE}
+#Make this list of genes and expression values into a csv file for future reference
+#Also attach the jpg image of the heatmap so that all the gene symbols are visible
 write.csv(explc_sig_adj, "rare_0.1adjDEG_BD_genesymbols.csv", quote = F)
 write.csv(explc_sig_01, "rare_0.01pvalDEG_BD_genesymbols.csv", quote = F)
 knitr::opts_chunk$set(echo = TRUE)
@@ -764,3 +688,9 @@ knitr::include_graphics("Ofav Adj 0.1 Sig DEG Mean Heatmap.jpg")
 
 
 ## Conclusions 
+
+- CYP3A28 is an Cytochrome P450, some genes for cytochrome P450 are NF-kB response genes; weakly downreg here
+- As is pla2g4a (phospholipase)
+- As is HSP110.1, not an NNF-kB response gene but is involved in thermal stress response
+- As is the phosphodiesterase pde9a.2
+- Cathepsin.1 is strongly upregulated in D; Cathepsin B and L are NF-kB response genes
