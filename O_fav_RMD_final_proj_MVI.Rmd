@@ -184,8 +184,8 @@ The matrix like object of the r log data `rld` is transposed and the `dist` func
 sampleDists <- as.matrix(dist(t(assay(rld))))
 ```
 
-The `sampleDists` matrix is used to generate a sample distance heatmap of relatednness based on the count distance or difference between samples as seen below.
-```{r, echo=FALSE, fig.cap="**Figure 6.** Sample distance heatmap where BR.C is clustering more with D.", eval=TRUE}
+The `sampleDists` matrix is used to generate a sample distance heatmap of relatedness based on the count distance or difference between samples as seen below.
+```{r, echo=FALSE, fig.cap="**Figure 6.** A sample distance heatmap created by calculating the distances between samples based on overall differences in the logfoldchange of all genes. Note that the *Orbicella faveolata* hosting Symbiodiniaceae strain B01 sample BR.C is clustering more with *O.faveolata* hosting Symbiodiniaceae strain D.", eval=TRUE}
 heatmap.2(as.matrix(sampleDists), key=F, trace="none",
           col=colorpanel(100, "black", "white"),
           margin=c(10, 10))
